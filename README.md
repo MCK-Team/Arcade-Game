@@ -4,6 +4,7 @@
 A rogue like arcade game that gives special abilities as the level progresses.
 
 ## User Stories
+[User Stories](https://github.com/MCK-Team/Arcade-Game/blob/main/user-stories.md)
 
 ## Wire-Frame
 
