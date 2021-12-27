@@ -3,6 +3,10 @@
 ## Description
 A rogue like arcade game that gives special abilities as the level progresses.
 
+## User Stories
+
+## Wire-Frame
+
 ## Authors
 Chloe Nott <br>
 Miguel Fierro <br>
