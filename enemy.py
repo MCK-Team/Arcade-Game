@@ -1,36 +1,39 @@
 import arcade
+import random
 
 
-class Cat(arcade.Sprite):
-    def __init__(self, max_health=100):
+class Enemy(arcade.Sprite):
+    def __init__(self, max_health):
         super().__init__()
-
         self.max_health = max_health
         self.cur_health = max_health
 
+
+class Rat(arcade.Sprite):
+    def __init__(self, max_health=100):
+        super().__init__()
+        self.max_health = max_health
+        self.cur_health = max_health
+
+        self.current_idle_counter = 0
+
         self.idle_textures = []
         for i in range(4):
-            self.idle_textures.append(arcade.load_texture("assets/cat/Idle.png", x=i * 48, y=0, width=48, height=48))
+            self.idle_textures.append(arcade.load_texture("assets/rat/Idle.png", x=i * 32, y=0, width=32, height=32))
         self.texture = self.idle_textures[0]
 
         self.running_textures_pair = [[], []]
-        for i in range(6):
-            self.running_textures_pair[0].append(arcade.load_texture("assets/cat/Running.png", x=i * 48, y=0, width=48,
-                                                                     height=48))
-        for i in range(6):
-            self.running_textures_pair[1].append(arcade.load_texture("assets/cat/Running.png", x=i * 48, y=0, width=48,
-                                                                     height=48, flipped_horizontally=True))
+        for i in range(4):
+            self.running_textures_pair[0].append(arcade.load_texture("assets/rat/Running.png", x=i * 32, y=0, width=32,
+                                                                     height=32))
+        for i in range(4):
+            self.running_textures_pair[1].append(arcade.load_texture("assets/rat/Running.png", x=i * 32, y=0, width=32,
+                                                                     height=32, flipped_horizontally=True))
 
-        self.current_idle_counter = 0
-        self.scale = 2
+        self.scale = 1.7
 
-    def draw_health_bar(self, x, y):
-        width = 350
-        if self.cur_health < self.max_health:
-            arcade.draw_rectangle_filled(center_x=x, center_y=y, width=width, height=20, color=arcade.color.RED)
-
-        health_width = width * (self.cur_health / self.max_health)
-        arcade.draw_rectangle_filled(center_x=x - 0.5 * (width - health_width), center_y=y, width=health_width, height=20, color=arcade.color.GREEN)
+    def on_update(self, delta_time: float = 1 / 60):
+        self.change_x = random.randint(-10, 10)
 
     def update_animation(self, delta_time: float = 1 / 60):
 
@@ -59,7 +62,7 @@ class Cat(arcade.Sprite):
                 direction = 1   # Left
 
             self.current_idle_counter += 1
-            if self.current_idle_counter >= 60*6/20:
+            if self.current_idle_counter >= 60*4/20:
                 self.current_idle_counter = 0
             current_running_frame = self.current_idle_counter // (1/(delta_time*20))  # Todo refactor this
 
@@ -71,7 +74,3 @@ class Cat(arcade.Sprite):
                 self.texture = self.running_textures_pair[direction][2]
             elif current_running_frame == 3:
                 self.texture = self.running_textures_pair[direction][3]
-            elif current_running_frame == 4:
-                self.texture = self.running_textures_pair[direction][4]
-            elif current_running_frame == 5:
-                self.texture = self.running_textures_pair[direction][5]
