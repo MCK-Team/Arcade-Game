@@ -51,14 +51,17 @@ class GameView(arcade.View):
             rat = Rat()
             rat.center_x = random.randrange(0, 10000)
             rat.center_y = 60
+            patrol_distance = random.randint(200, 750)
+            rand = random.randint(0, patrol_distance)
+            rat.boundary_left = rat.center_x - (patrol_distance - rand)
+            rat.boundary_right = rat.center_x + rand
             self.enemy_list.append(rat)
 
         self.cat.center_x = 300
         self.cat.center_y = 300
         self.scene = arcade.Scene()
-        self.scene.add_sprite("cat", self.cat)
-
-        self.scene.add_sprite_list("rat", self.enemy_list)
+        self.scene.add_sprite("Cat", self.cat)
+        self.scene.add_sprite_list("Rats", use_spatial_hash=True, sprite_list=self.enemy_list)
 
         for x in range(0, 15000, 64):
             wall = arcade.Sprite(":resources:images/tiles/grassMid.png", 0.5)
@@ -69,7 +72,7 @@ class GameView(arcade.View):
             if x % (64 * random.randint(1, 10)) == 0:
                 wall_2 = arcade.Sprite(":resources:images/tiles/grassMid.png", 0.5)
                 wall_2.center_x = x
-                wall_2.center_y = random.randrange(64, 512, 64)
+                wall_2.center_y = random.randrange(128, 512, 64)
                 self.scene.add_sprite("Walls", wall_2)
 
         self.physics_engine = arcade.PhysicsEnginePlatformer(
@@ -82,22 +85,18 @@ class GameView(arcade.View):
         arcade.start_render()
         self.camera.use()
         self.scene.draw()
-        self.enemy_list.draw()
         self.cat.draw_health_bar(self.cat.center_x - 450, self.cat.center_y + 330)
 
     def on_key_press(self, key, modifiers):
 
-        if key == arcade.key.RIGHT or key == arcade.key.D:
+        if (key == arcade.key.RIGHT or key == arcade.key.D) and self.cat.cur_health > 0:
             self.cat.change_x = 12
-        elif key == arcade.key.LEFT or key == arcade.key.A:
+        elif (key == arcade.key.LEFT or key == arcade.key.A) and self.cat.cur_health > 0:
             self.cat.change_x = -12
-        elif key == arcade.key.UP or key == arcade.key.W:
+        elif (key == arcade.key.UP or key == arcade.key.W) and self.cat.cur_health > 0:
             if self.physics_engine.can_jump():
                 self.cat.change_y = 15
                 # Todo: Use enable_multi_jump(2) for double jump. Don't forget to increment_jump_counter() here also.
-        elif key == arcade.key.K:
-            if self.cat.cur_health > 0:
-                self.cat.cur_health -= 5
 
     def on_key_release(self, key, modifiers):
         if key == arcade.key.RIGHT or key == arcade.key.D:
@@ -115,7 +114,26 @@ class GameView(arcade.View):
     def on_update(self, delta_time):
         self.physics_engine.update()
         self.center_camera_to_cat()
-        self.cat.update_animation()
+        self.enemy_list.update_animation()
+        self.enemy_list.update()
+
+        for rat in self.enemy_list:
+            if rat.center_x < rat.boundary_left:
+                rat.change_x *= -1
+            elif rat.center_x > rat.boundary_right:
+                rat.change_x *= -1
+
+        if self.cat.cur_health <= 0:
+            self.cat.change_x = 0
+            self.cat.death_animation(delta_time)
+        elif arcade.check_for_collision_with_list(self.cat, self.enemy_list):
+            if self.cat.cur_health > 0:
+                self.cat.cur_health -= 1  # RAT DAMAGE
+                self.cat.hurt_animation(delta_time)  # hurt animation
+                if self.cat.cur_health <= 0:
+                    self.cat.current_animation_counter = 0
+        else:
+            self.cat.update_animation()
 
 
 def main():

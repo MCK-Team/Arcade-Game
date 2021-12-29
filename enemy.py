@@ -3,19 +3,20 @@ import random
 
 
 class Enemy(arcade.Sprite):
-    def __init__(self, max_health):
-        super().__init__()
-        self.max_health = max_health
-        self.cur_health = max_health
-
-
-class Rat(arcade.Sprite):
     def __init__(self, max_health=100):
         super().__init__()
         self.max_health = max_health
         self.cur_health = max_health
 
+
+class Rat(Enemy):
+    def __init__(self):
+        super().__init__()
+        # self.max_health = max_health
+        # self.cur_health = max_health
+
         self.current_idle_counter = 0
+        self.change_x = random.random() * 4 + 2
 
         self.idle_textures = []
         for i in range(4):
@@ -32,8 +33,8 @@ class Rat(arcade.Sprite):
 
         self.scale = 1.7
 
-    def on_update(self, delta_time: float = 1 / 60):
-        self.change_x = random.randint(-10, 10)
+    #def update(self, delta_time: float = 1 / 60):
+    #    self.center_x += random.randint(-10, 10)
 
     def update_animation(self, delta_time: float = 1 / 60):
 
