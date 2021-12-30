@@ -7,6 +7,8 @@ class Cat(arcade.Sprite):
 
         self.max_health = max_health
         self.cur_health = max_health
+        self.can_shoot = False
+        self.shoot_timer = 0
 
         # IDLE TEXTURES
         self.idle_textures_pair = [[], []]

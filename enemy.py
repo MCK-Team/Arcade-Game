@@ -8,6 +8,14 @@ class Enemy(arcade.Sprite):
         self.max_health = max_health
         self.cur_health = max_health
 
+    def draw_health_bar(self, x, y):
+        width = 50
+        if self.cur_health < self.max_health:
+            arcade.draw_rectangle_filled(center_x=x, center_y=y + 50, width=width, height=10, color=arcade.color.BLACK)
+
+        health_width = width * (self.cur_health / self.max_health)
+        arcade.draw_rectangle_filled(center_x=x - 0.5 * (width - health_width), center_y=y + 50, width=health_width, height=10, color=arcade.color.RED)
+
 
 class Rat(Enemy):
     def __init__(self):
@@ -17,6 +25,9 @@ class Rat(Enemy):
 
         self.current_idle_counter = 0
         self.change_x = random.random() * 4 + 2
+
+        self.cooldown_time = 2    # in seconds
+        self.cooldown_timer = random.random() * self.cooldown_time
 
         self.idle_textures = []
         for i in range(4):
