@@ -9,7 +9,7 @@ from enemy import Rat, StormHead
 WIDTH = 1920
 HEIGHT = 1080
 SCORE = 0
-SKILLS = []
+SKILLS = ["AOE"]
 WAVE = 0
 
 
@@ -102,6 +102,9 @@ class GameView(arcade.View):
             walls=self.scene["Block you can touch"],
             gravity_constant=0.5
         )
+
+        self.physics_engine.enable_multi_jump(5)
+
         self.texture_list = []
         for i in list(range(2)):
             self.texture_list.append(arcade.load_texture(f"assets/sword/SwordAn{i + 1}.png", x=0, y=0, width=128, height=64))
@@ -112,7 +115,7 @@ class GameView(arcade.View):
         self.scene.draw()
 
         for rat in self.scene["Enemies"]:
-            rat.draw_health_bar(rat.center_x, rat.center_y)
+            rat.draw_health_bar(rat.center_x, rat.center_y) # TODO: The rectangles within here redraw from scratch which causes severe frame rate loss when > 10-20 health bars show.
 
         self.stormhead.draw_health_bar(self.stormhead.center_x, self.stormhead.center_y)
 
@@ -135,7 +138,7 @@ class GameView(arcade.View):
         if button == arcade.MOUSE_BUTTON_LEFT and self.cat.cur_health > 0:
             bullet = arcade.Sprite(texture=self.texture_list[0], scale=1.25)
 
-            bullet.bullet_life = 5
+            bullet.bullet_life = 1
             bullet.frame = random.randint(0, 4)
 
             speed = 40
@@ -161,7 +164,7 @@ class GameView(arcade.View):
         elif (key == arcade.key.SPACE or key == arcade.key.W) and self.cat.cur_health > 0:
             if self.physics_engine.can_jump():
                 self.cat.change_y = 12
-                # Todo: use enable_multi_jump(2) for double jump. Don't forget to increment_jump_counter() here also.
+                self.physics_engine.increment_jump_counter()    # TODO: use enable_multi_jump(2) for double jump. Don't forget to increment_jump_counter() here also.
 
         elif key == arcade.key.E and self.cat.cur_health > 0 and "AOE" in SKILLS:
 
@@ -204,18 +207,18 @@ class GameView(arcade.View):
         self.camera.move_to(camera_center)
 
     def on_update(self, delta_time):
+        print(delta_time)
         self.physics_engine.update()
         self.center_camera_to_cat()
         self.scene["Enemies"].update_animation()
         self.scene["StormHead"].update_animation()
-        # self.enemy_list.update()
         self.scene.update()
 
         if len(self.scene["Enemies"]) == 0:
             global WAVE
             WAVE += 1
             self.waze_size += 10
-            for i in range(self.waze_size):
+            for i in range(self.waze_size + 250):
                 rat = Rat()
                 rat.center_x = random.randrange(2000, 6500)
                 rat.center_y = 505
@@ -230,7 +233,7 @@ class GameView(arcade.View):
                 rand = random.randint(0, patrol_distance)
                 self.stormhead.boundary_left = self.stormhead.center_x - (patrol_distance - rand)
                 self.stormhead.boundary_right = self.stormhead.center_x + rand
-
+            self.scene["Enemies"].enable_spatial_hashing()
         sword_direction = 1 if self.cat.direction == 0 else -1
 
         if "BLOCK" in SKILLS:
@@ -254,21 +257,21 @@ class GameView(arcade.View):
 
             x_dist = self.cat.center_x - rat.center_x
             y_dist = self.cat.center_y - rat.center_y
-            distance = pow(x_dist * x_dist + y_dist * y_dist, 0.5)
+            rat.current_distance = pow(x_dist * x_dist + y_dist * y_dist, 0.5)
 
-            if rat.cooldown_timer <= 0 and distance < 500:
+            if rat.cooldown_timer <= 0 and rat.current_distance < rat.attack_distance:
                 rat.cooldown_timer = rat.cooldown_time
                 bullet_rats = arcade.Sprite(":resources:images/space_shooter/laserBlue01.png", scale=1)
 
                 bullet_rats.bullet_life = 4
 
                 radians = math.atan2(self.cat.center_y - rat.center_y, self.cat.center_x - rat.center_x)
-                speed = 5
+                speed = 10
 
                 bullet_rats.center_x = rat.center_x + math.cos(radians) * 50
                 bullet_rats.center_y = rat.center_y + math.sin(radians) * 50
 
-                aim_variability = (random.random() - 0.5) * 0.2
+                aim_variability = (random.random() - 0.5) * 0.05
                 bullet_rats.change_x = math.cos(radians + aim_variability) * speed
                 bullet_rats.change_y = math.sin(radians + aim_variability) * speed
                 bullet_rats.radians = radians
@@ -302,7 +305,6 @@ class GameView(arcade.View):
                 else:
                     view = ShopView()
                     self.window.show_view(view)
-
         elif cat_rat_bullet_collisions:
             for bullet in cat_rat_bullet_collisions:
                 bullet.remove_from_sprite_lists()
@@ -334,17 +336,19 @@ class GameView(arcade.View):
             else:
                 bullet.frame = 1
             bullet.texture = self.texture_list[bullet.frame]
-
             if bullet.bullet_life <= 0:
                 bullet.remove_from_sprite_lists()
-            collisions = arcade.check_for_collision_with_lists(bullet, [self.scene["Enemies"], self.scene["StormHead"]])
+            collisions = arcade.check_for_collision_with_list(bullet, self.scene["Enemies"])
             for collision in collisions:
+                collision.show_health_timer = collision.show_health_time
                 if collision.cur_health >= 0:
                     collision.cur_health -= 20
                 if collision.cur_health <= 0:
                     collision.remove_from_sprite_lists()
                     global SCORE
                     SCORE += 100
+
+
 
 
 class ShopView(arcade.View):
@@ -428,7 +432,7 @@ class ShopView(arcade.View):
 
 def main():
     from menu import MenuView
-    window = arcade.Window(WIDTH, HEIGHT, "Arcade Game", vsync=True, antialiasing=True)
+    window = arcade.Window(WIDTH, HEIGHT, "Arcade Game", vsync=True, antialiasing=False)
     start_view = MenuView()
     window.show_view(start_view)
     arcade.run()

@@ -3,18 +3,23 @@ import random
 
 
 class Enemy(arcade.Sprite):
-    def __init__(self, max_health=100):
+    def __init__(self, max_health=100, attack_distance=1500, current_distance = None):
         super().__init__()
         self.max_health = max_health
         self.cur_health = max_health
+        self.attack_distance = attack_distance
+        self.curent_distance = current_distance
+        self.show_health_time = 3
+        self.show_health_timer = 0
 
     def draw_health_bar(self, x, y):
-        width = 50
-        if self.cur_health < self.max_health:
-            arcade.draw_rectangle_filled(center_x=x, center_y=y + 50, width=width, height=10, color=arcade.color.BLACK)
+        if self.show_health_timer > 0:
+            width = 50
+            if self.cur_health < self.max_health:
+                arcade.draw_rectangle_filled(center_x=x, center_y=y + 50, width=width, height=10, color=arcade.color.BLACK)
 
-        health_width = width * (self.cur_health / self.max_health)
-        arcade.draw_rectangle_filled(center_x=x - 0.5 * (width - health_width), center_y=y + 50, width=health_width, height=10, color=arcade.color.RED)
+            health_width = width * (self.cur_health / self.max_health)
+            arcade.draw_rectangle_filled(center_x=x - 0.5 * (width - health_width), center_y=y + 50, width=health_width, height=10, color=arcade.color.RED)
 
 
 class StormHead(Enemy):
@@ -38,6 +43,8 @@ class StormHead(Enemy):
         self.scale = 2
 
     def update_animation(self, delta_time: float = 1 / 60):
+        if self.show_health_timer > 0:
+            self.show_health_timer -= delta_time
 
         # Idle Animation
         if self.change_x == 0 and self.change_y == 0:
@@ -68,7 +75,7 @@ class Rat(Enemy):
         self.current_idle_counter = 0
         self.change_x = random.random() * 4 + 2
 
-        self.cooldown_time = 2    # in seconds
+        self.cooldown_time = 1    # in seconds
         self.cooldown_timer = random.random() * self.cooldown_time
 
         self.idle_textures = []
@@ -90,6 +97,8 @@ class Rat(Enemy):
     #    self.center_x += random.randint(-10, 10)
 
     def update_animation(self, delta_time: float = 1 / 60):
+        if self.show_health_timer > 0:
+            self.show_health_timer -= delta_time
 
         # Idle Animation
         if self.change_x == 0 and self.change_y == 0:
