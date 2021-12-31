@@ -5,58 +5,12 @@ import math
 from cat import Cat
 from enemy import Rat, StormHead
 
+
 WIDTH = 1920
 HEIGHT = 1080
 SCORE = 0
 SKILLS = []
-
-
-class MenuView(arcade.View):
-    def __init__(self):
-        super().__init__()
-        self.manager = arcade.gui.UIManager()
-        self.manager.enable()
-        self.v_box = arcade.gui.UIBoxLayout()
-
-        title_text = arcade.gui.UITextArea(text="Arcade Cat", width=400, height=40, font_size=30, font_name="Kenney Future")
-
-        self.v_box.add(title_text.with_space_around(bottom=2))
-
-        instructions = "The Goal is to kill all enemies and improve your skills throughout your journey"
-
-        instruction_label = arcade.gui.UITextArea(text=instructions, width=400, height=60, font_size=14, font_name="Arial")
-        self.v_box.add(instruction_label.with_space_around(bottom=10))
-
-        keys = """
-        A / Left Arrow: left
-        W / Space : Jump
-        D / Right Arrow: Right
-        Left Click: Shoot """
-
-        key_text = arcade.gui.UITextArea(text=keys, width=400, height=140, font_size=14, font_name="Arial")
-        self.v_box.add(key_text.with_space_around(bottom=2))
-
-        start_button = arcade.gui.UIFlatButton(text="Begin Journey", width=150)
-        self.v_box.add(start_button.with_space_around(bottom=10))
-
-        @start_button.event('on_click')
-        def on_click_start(event):
-            self.manager.disable()
-            game_view = GameView()
-            self.window.show_view(game_view)
-            game_view.setup()
-
-        self.manager.add(
-            arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y", child=self.v_box))
-
-    def on_show(self):
-        arcade.set_background_color(arcade.color.AMETHYST)
-
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
-
-    def on_draw(self):
-        arcade.start_render()
-        self.manager.draw()
+WAVE = 0
 
 
 class GameView(arcade.View):
@@ -73,6 +27,7 @@ class GameView(arcade.View):
         self.wall_list = None
         self.texture_list = None
         self.ground_list = None
+        self.waze_size = None
 
         self.scene = None
         self.camera = None
@@ -90,33 +45,19 @@ class GameView(arcade.View):
         self.camera_gui = arcade.Camera(WIDTH, HEIGHT)
         self.change_screen_timer = 3
 
+        self.waze_size = 0
+
         self.cat = Cat()
         self.stormhead = StormHead()
         self.bullet_list = arcade.SpriteList()
         self.enemy_list = arcade.SpriteList()
         self.wall_list = arcade.SpriteList(is_static=True)
         self.ground_list = arcade.SpriteList(is_static=True)
-
         self.tile_map = arcade.load_tilemap("assets/map/Map1.json", scaling=5, use_spatial_hash=True)
 
-        for i in range(30):
-            rat = Rat()
-            rat.center_x = random.randrange(0, 6500)
-            rat.center_y = 505
-            patrol_distance = random.randint(200, 750)
-            rand = random.randint(0, patrol_distance)
-            rat.boundary_left = rat.center_x - (patrol_distance - rand)
-            rat.boundary_right = rat.center_x + rand
-            self.enemy_list.append(rat)
-
+        # PLAYER POSITION
         self.cat.center_x = 300
         self.cat.center_y = 1300
-
-        self.stormhead.center_x = 7000
-        self.stormhead.center_y = 596
-        rand = random.randint(0, patrol_distance)
-        self.stormhead.boundary_left = self.stormhead.center_x - (patrol_distance - rand)
-        self.stormhead.boundary_right = self.stormhead.center_x + rand
 
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
         self.scene.add_sprite("Cat", self.cat)
@@ -177,8 +118,15 @@ class GameView(arcade.View):
 
         self.camera_gui.use()
         self.cat.draw_health_bar(WIDTH / 2, HEIGHT - 50)
+
         score = f"Score: {SCORE}"
         arcade.draw_text(score, WIDTH / 4, HEIGHT - 60, color=arcade.color.BLACK, font_size=20, font_name="Kenney Future")
+
+        wave = f"Wave: {WAVE}"
+        arcade.draw_text(wave, WIDTH - 650, HEIGHT - 60, color=arcade.color.BLACK, font_size=20, font_name="Kenney Future")
+
+        enemies = f"Enemies Left: {len(self.enemy_list)}"
+        arcade.draw_text(enemies, WIDTH - 650, HEIGHT - 100, color=arcade.color.BLACK, font_size=20, font_name="Kenney Future")
 
     def on_mouse_press(self, x, y, button, modifiers):
         radians = math.atan2((self.screen_center_y + y) - self.cat.center_y, (self.screen_center_x + x) - self.cat.center_x)
@@ -262,6 +210,26 @@ class GameView(arcade.View):
         # self.enemy_list.update()
         self.scene.update()
 
+        if len(self.enemy_list) == 0:
+            global WAVE
+            WAVE += 1
+            self.waze_size += 10
+            for i in range(self.waze_size):
+                rat = Rat()
+                rat.center_x = random.randrange(2000, 6500)
+                rat.center_y = 505
+                patrol_distance = random.randint(200, 750)
+                rand = random.randint(0, patrol_distance)
+                rat.boundary_left = rat.center_x - (patrol_distance - rand)
+                rat.boundary_right = rat.center_x + rand
+                self.enemy_list.append(rat)
+
+                self.stormhead.center_x = 7000
+                self.stormhead.center_y = 596
+                rand = random.randint(0, patrol_distance)
+                self.stormhead.boundary_left = self.stormhead.center_x - (patrol_distance - rand)
+                self.stormhead.boundary_right = self.stormhead.center_x + rand
+
         sword_direction = 1 if self.cat.direction == 0 else -1
 
         if "BLOCK" in SKILLS:
@@ -282,7 +250,12 @@ class GameView(arcade.View):
                 collision.remove_from_sprite_lists()
 
         for rat in self.enemy_list:
-            if rat.cooldown_timer <= 0:
+
+            x_dist = self.cat.center_x - rat.center_x
+            y_dist = self.cat.center_y - rat.center_y
+            distance = pow(x_dist * x_dist + y_dist * y_dist, 0.5)
+
+            if rat.cooldown_timer <= 0 and distance < 500:
                 rat.cooldown_timer = rat.cooldown_time
                 bullet_rats = arcade.Sprite(":resources:images/space_shooter/laserBlue01.png", scale=1)
 
@@ -453,6 +426,7 @@ class ShopView(arcade.View):
 
 
 def main():
+    from menu import MenuView
     window = arcade.Window(WIDTH, HEIGHT, "Arcade Game", vsync=True, antialiasing=True)
     start_view = MenuView()
     window.show_view(start_view)
