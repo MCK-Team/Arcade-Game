@@ -9,7 +9,7 @@ from enemy import Rat, StormHead
 WIDTH = 1920
 HEIGHT = 1080
 SCORE = 0
-SKILLS = ["AOE"]
+SKILLS = ["AOE", "BLOCK"]
 WAVE = 0
 
 
@@ -71,7 +71,7 @@ class GameView(arcade.View):
             self.sword.center_x = self.cat.center_x
             self.sword.center_y = self.cat.center_y + 15
             self.sword.block_timer = 0
-            self.sword.block_time = 0.35
+            self.sword.block_time = 10
             self.scene.add_sprite("Sword", self.sword)
 
         arcade.set_background_color((212, 240, 246))  # D4F0F6
@@ -164,7 +164,7 @@ class GameView(arcade.View):
         elif (key == arcade.key.SPACE or key == arcade.key.W) and self.cat.cur_health > 0:
             if self.physics_engine.can_jump():
                 self.cat.change_y = 12
-                self.physics_engine.increment_jump_counter()    # TODO: use enable_multi_jump(2) for double jump. Don't forget to increment_jump_counter() here also.
+                self.physics_engine.increment_jump_counter()
 
         elif key == arcade.key.E and self.cat.cur_health > 0 and "AOE" in SKILLS:
 
@@ -218,7 +218,7 @@ class GameView(arcade.View):
             global WAVE
             WAVE += 1
             self.waze_size += 10
-            for i in range(self.waze_size + 250):
+            for i in range(self.waze_size + 500):
                 rat = Rat()
                 rat.center_x = random.randrange(2000, 6500)
                 rat.center_y = 505
@@ -299,12 +299,13 @@ class GameView(arcade.View):
             self.cat.change_x = 0
             self.cat.death_animation(delta_time)
 
-            for _ in range(4):
-                if self.change_screen_timer > 0:
-                    self.change_screen_timer -= 1 / (60 * 3)
-                else:
-                    view = ShopView()
-                    self.window.show_view(view)
+            # TODO: Uncomment after debugging
+            # for _ in range(4):
+            #     if self.change_screen_timer > 0:
+            #         self.change_screen_timer -= 1 / (60 * 3)
+            #     else:
+            #         view = ShopView()
+            #         self.window.show_view(view)
         elif cat_rat_bullet_collisions:
             for bullet in cat_rat_bullet_collisions:
                 bullet.remove_from_sprite_lists()
