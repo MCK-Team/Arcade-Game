@@ -62,7 +62,7 @@ class GameView(arcade.View):
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
         self.scene.add_sprite("Cat", self.cat)
         self.scene.add_sprite("StormHead", self.stormhead)
-        self.scene.add_sprite_list("Rats", sprite_list=self.enemy_list)
+        self.scene.add_sprite_list("Enemies", sprite_list=self.enemy_list)
         self.scene.add_sprite_list("Bullets", sprite_list=self.bullet_list)
         self.scene.add_sprite_list("Bullets_Rats", sprite_list=arcade.SpriteList())
 
@@ -111,7 +111,7 @@ class GameView(arcade.View):
         self.camera.use()
         self.scene.draw()
 
-        for rat in self.scene["Rats"]:
+        for rat in self.scene["Enemies"]:
             rat.draw_health_bar(rat.center_x, rat.center_y)
 
         self.stormhead.draw_health_bar(self.stormhead.center_x, self.stormhead.center_y)
@@ -125,7 +125,8 @@ class GameView(arcade.View):
         wave = f"Wave: {WAVE}"
         arcade.draw_text(wave, WIDTH - 650, HEIGHT - 60, color=arcade.color.BLACK, font_size=20, font_name="Kenney Future")
 
-        enemies = f"Enemies Left: {len(self.enemy_list)}"
+        number_of_enemies = len(self.scene["Enemies"])
+        enemies = f"Enemies Left: {number_of_enemies}"
         arcade.draw_text(enemies, WIDTH - 650, HEIGHT - 100, color=arcade.color.BLACK, font_size=20, font_name="Kenney Future")
 
     def on_mouse_press(self, x, y, button, modifiers):
@@ -205,12 +206,12 @@ class GameView(arcade.View):
     def on_update(self, delta_time):
         self.physics_engine.update()
         self.center_camera_to_cat()
-        self.scene["Rats"].update_animation()
+        self.scene["Enemies"].update_animation()
         self.scene["StormHead"].update_animation()
         # self.enemy_list.update()
         self.scene.update()
 
-        if len(self.enemy_list) == 0:
+        if len(self.scene["Enemies"]) == 0:
             global WAVE
             WAVE += 1
             self.waze_size += 10
@@ -222,7 +223,7 @@ class GameView(arcade.View):
                 rand = random.randint(0, patrol_distance)
                 rat.boundary_left = rat.center_x - (patrol_distance - rand)
                 rat.boundary_right = rat.center_x + rand
-                self.enemy_list.append(rat)
+                self.scene["Enemies"].append(rat)
 
                 self.stormhead.center_x = 7000
                 self.stormhead.center_y = 596
@@ -249,7 +250,7 @@ class GameView(arcade.View):
             for collision in sword_block_collisions:
                 collision.remove_from_sprite_lists()
 
-        for rat in self.enemy_list:
+        for rat in self.scene["Enemies"]:
 
             x_dist = self.cat.center_x - rat.center_x
             y_dist = self.cat.center_y - rat.center_y
@@ -282,7 +283,7 @@ class GameView(arcade.View):
                 rat.change_x *= -1
 
         # Blocking sword damages rats.
-        # sword_block_collisions = arcade.check_for_collision_with_list(self.sword, self.scene["Rats"])
+        # sword_block_collisions = arcade.check_for_collision_with_list(self.sword, self.scene["Enemies"])
         # for collision in sword_block_collisions:
         #     if collision.cur_health >= 0:
         #         collision.cur_health -= 20
@@ -310,7 +311,7 @@ class GameView(arcade.View):
                 self.cat.hurt_animation(delta_time)  # hurt animation
                 if self.cat.cur_health <= 0:
                     self.cat.current_animation_counter = 0
-        elif arcade.check_for_collision_with_list(self.cat, self.enemy_list):
+        elif arcade.check_for_collision_with_list(self.cat, self.scene["Enemies"]):
             if self.cat.cur_health > 0:
                 self.cat.cur_health -= 1  # RAT DAMAGE
                 self.cat.hurt_animation(delta_time)  # hurt animation
@@ -336,7 +337,7 @@ class GameView(arcade.View):
 
             if bullet.bullet_life <= 0:
                 bullet.remove_from_sprite_lists()
-            collisions = arcade.check_for_collision_with_lists(bullet, [self.scene["Rats"], self.scene["StormHead"]])
+            collisions = arcade.check_for_collision_with_lists(bullet, [self.scene["Enemies"], self.scene["StormHead"]])
             for collision in collisions:
                 if collision.cur_health >= 0:
                     collision.cur_health -= 20
