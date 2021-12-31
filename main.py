@@ -3,8 +3,7 @@ import arcade.gui
 import random
 import math
 from cat import Cat
-from enemy import Rat, StormHead
-
+from enemy import Rat, StormHead, NightBorne
 
 WIDTH = 1920
 HEIGHT = 1080
@@ -22,6 +21,7 @@ class GameView(arcade.View):
         self.cat = None
         self.sword = None
         self.stormhead = None
+        self.nightborne = None
         self.enemy_list = None
         self.bullet_list = None
         self.wall_list = None
@@ -49,6 +49,7 @@ class GameView(arcade.View):
 
         self.cat = Cat()
         self.stormhead = StormHead()
+        self.nightborne = NightBorne()
         self.bullet_list = arcade.SpriteList()
         self.enemy_list = arcade.SpriteList()
         self.wall_list = arcade.SpriteList(is_static=True)
@@ -62,6 +63,7 @@ class GameView(arcade.View):
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
         self.scene.add_sprite("Cat", self.cat)
         self.scene.add_sprite("StormHead", self.stormhead)
+        self.scene.add_sprite("NightBorne", self.nightborne)
         self.scene.add_sprite_list("Enemies", sprite_list=self.enemy_list)
         self.scene.add_sprite_list("Bullets", sprite_list=self.bullet_list)
         self.scene.add_sprite_list("Bullets_Rats", sprite_list=arcade.SpriteList())
@@ -115,7 +117,7 @@ class GameView(arcade.View):
         self.scene.draw()
 
         for rat in self.scene["Enemies"]:
-            rat.draw_health_bar(rat.center_x, rat.center_y) # TODO: The rectangles within here redraw from scratch which causes severe frame rate loss when > 10-20 health bars show.
+            rat.draw_health_bar(rat.center_x, rat.center_y)  # TODO: The rectangles within here redraw from scratch which causes severe frame rate loss when > 10-20 health bars show.
 
         self.stormhead.draw_health_bar(self.stormhead.center_x, self.stormhead.center_y)
 
@@ -207,11 +209,11 @@ class GameView(arcade.View):
         self.camera.move_to(camera_center)
 
     def on_update(self, delta_time):
-        print(delta_time)
         self.physics_engine.update()
         self.center_camera_to_cat()
         self.scene["Enemies"].update_animation()
         self.scene["StormHead"].update_animation()
+        self.scene["NightBorne"].update_animation()
         self.scene.update()
 
         if len(self.scene["Enemies"]) == 0:
@@ -222,7 +224,7 @@ class GameView(arcade.View):
                 rat = Rat()
                 rat.center_x = random.randrange(2000, 6500)
                 rat.center_y = 505
-                patrol_distance = random.randint(200, 750)
+                patrol_distance = random.randint(200, 750)  # TODO: Refactor patrol distance and boundaries into enemy class
                 rand = random.randint(0, patrol_distance)
                 rat.boundary_left = rat.center_x - (patrol_distance - rand)
                 rat.boundary_right = rat.center_x + rand
@@ -230,11 +232,46 @@ class GameView(arcade.View):
 
                 self.stormhead.center_x = 7000
                 self.stormhead.center_y = 596
+
+                self.nightborne.center_x = 500
+                self.nightborne.center_y = 560
+                self.nightborne.boundary_left = self.nightborne.center_x - (patrol_distance - rand)
+                self.nightborne.boundary_right = self.nightborne.center_x + rand
+
                 rand = random.randint(0, patrol_distance)
                 self.stormhead.boundary_left = self.stormhead.center_x - (patrol_distance - rand)
                 self.stormhead.boundary_right = self.stormhead.center_x + rand
             self.scene["Enemies"].enable_spatial_hashing()
         sword_direction = 1 if self.cat.direction == 0 else -1
+
+        x_dist = abs(self.cat.center_x - self.nightborne.center_x)
+        y_dist = abs(self.cat.center_y - self.nightborne.center_y)
+        self.nightborne.current_distance = pow(x_dist * x_dist + y_dist * y_dist, 0.5)
+
+        if self.nightborne.state == "Attack":
+            self.nightborne.change_x = 0
+        # if self.nightborne.state == "Cooldown":
+        #     if self.cat.center_x < self.nightborne.center_x:
+        #         self.nightborne.change_x = 1 * self.nightborne.attack_movement_speed
+        #     elif self.cat.center_x > self.nightborne.center_x:
+        #         self.nightborne.change_x = -1 * self.nightborne.attack_movement_speed
+        #     self.nightborne.state == "Idle"
+        elif self.nightborne.state == "Idle":
+            if abs(self.nightborne.center_y - self.cat.center_y) > self.nightborne.melee_attack_distance and abs(self.nightborne.center_x - self.cat.center_x) < self.nightborne.melee_attack_distance / 2:
+                self.nightborne.change_x = 0
+            elif self.nightborne.attack_distance > self.nightborne.current_distance > self.nightborne.melee_attack_distance:
+                if self.cat.center_x < self.nightborne.center_x:
+                    self.nightborne.change_x = -1 * self.nightborne.walk_speed
+                elif self.cat.center_x > self.nightborne.center_x:
+                    self.nightborne.change_x = 1 * self.nightborne.walk_speed
+            elif self.nightborne.current_distance <= self.nightborne.melee_attack_distance:
+                if self.cat.center_x + self.nightborne.melee_attack_distance < self.nightborne.center_x:
+                    self.nightborne.change_x = -1 * self.nightborne.attack_movement_speed
+                elif self.cat.center_x - self.nightborne.melee_attack_distance > self.nightborne.center_x:
+                    self.nightborne.change_x = 1 * self.nightborne.attack_movement_speed
+                self.nightborne.state = "Attack"
+            else:
+                self.nightborne.change_x = 0
 
         if "BLOCK" in SKILLS:
             if self.sword.block_timer > 0:
@@ -280,10 +317,16 @@ class GameView(arcade.View):
             else:
                 rat.cooldown_timer -= delta_time
 
+            # TODO: Refactor this into the enemy class's update method.
             if rat.center_x < rat.boundary_left:
                 rat.change_x *= -1
             elif rat.center_x > rat.boundary_right:
                 rat.change_x *= -1
+
+        # if self.nightborne.center_x < self.nightborne.boundary_left:
+        #     self.nightborne.change_x *= -1
+        # elif self.nightborne.center_x > self.nightborne.boundary_right:
+        #     self.nightborne.change_x *= -1
 
         # Blocking sword damages rats.
         # sword_block_collisions = arcade.check_for_collision_with_list(self.sword, self.scene["Enemies"])
@@ -350,14 +393,16 @@ class GameView(arcade.View):
                     SCORE += 100
 
 
-
-
 class ShopView(arcade.View):
     def __init__(self):
         super().__init__()
         self.manager = arcade.gui.UIManager()
         self.manager.enable()
         self.v_box = arcade.gui.UIBoxLayout()
+        self.background = []
+        for i in range(7):
+            self.background.append(arcade.load_texture(f"assets/background/noonbackground{i + 1}.png", x=0, y=0, width=1024, height=768))
+        self.texture = self.background[0]
 
         title_text = arcade.gui.UITextArea(text="Welcome to the shop!", width=600, height=50, font_size=20, font_name="Kenney Future")
         self.v_box.add(title_text.with_space_around(bottom=5))
