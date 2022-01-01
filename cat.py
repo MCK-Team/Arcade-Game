@@ -52,6 +52,8 @@ class Cat(arcade.Sprite):
         health_width = width * (self.cur_health / self.max_health)
         arcade.draw_rectangle_filled(center_x=x - 0.5 * (width - health_width), center_y=y, width=health_width, height=20, color=arcade.color.GREEN)
 
+        arcade.draw_text(f"{self.cur_health}", start_x=x, start_y=y - 5, font_size=12, font_name="Kenney Rocket", color=arcade.color.BLACK)
+
     def update_animation(self, delta_time: float = 1 / 60):
         if self.change_x > 0:
             self.direction = 0  # Right

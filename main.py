@@ -61,10 +61,11 @@ class GameView(arcade.View):
         self.cat.center_y = 1300
 
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
-        self.scene.add_sprite("Cat", self.cat)
+
         self.scene.add_sprite("StormHead", self.stormhead)
         self.scene.add_sprite("NightBorne", self.nightborne)
         self.scene.add_sprite_list("Enemies", sprite_list=self.enemy_list)
+        self.scene.add_sprite("Cat", self.cat)
         self.scene.add_sprite_list("Bullets", sprite_list=self.bullet_list)
         self.scene.add_sprite_list("Bullets_Rats", sprite_list=arcade.SpriteList())
 
@@ -115,11 +116,14 @@ class GameView(arcade.View):
         arcade.start_render()
         self.camera.use()
         self.scene.draw()
+        self.scene["NightBorne"].draw_hit_boxes(color=arcade.color.RED, line_thickness=10)
 
         for rat in self.scene["Enemies"]:
             rat.draw_health_bar(rat.center_x, rat.center_y)  # TODO: The rectangles within here redraw from scratch which causes severe frame rate loss when > 10-20 health bars show.
 
         self.stormhead.draw_health_bar(self.stormhead.center_x, self.stormhead.center_y)
+
+        self.nightborne.draw_health_bar(self.nightborne.center_x, self.nightborne.center_y)
 
         self.camera_gui.use()
         self.cat.draw_health_bar(WIDTH / 2, HEIGHT - 50)
@@ -205,7 +209,7 @@ class GameView(arcade.View):
         self.screen_center_x = self.cat.center_x - (WIDTH / 2)
         self.screen_center_y = self.cat.center_y - (HEIGHT / 2)
 
-        camera_center = self.screen_center_x, self.screen_center_y
+        camera_center = self.screen_center_x, self.screen_center_y  # TODO: consider not centering the cat; camera leads with cat's movement.
         self.camera.move_to(camera_center)
 
     def on_update(self, delta_time):
@@ -214,7 +218,11 @@ class GameView(arcade.View):
         self.scene["Enemies"].update_animation()
         self.scene["StormHead"].update_animation()
         self.scene["NightBorne"].update_animation()
+        #self.scene["NightBorne"].update_hitbox()
+        #self.scene["NightBorne"].draw_hit_boxes(color=arcade.color.RED, line_thickness=10)
         self.scene.update()
+        if len(self.scene["NightBorne"]) > 0:
+            self.scene["NightBorne"][0].update_sprite(self.cat.center_x, self.cat.center_y)
 
         if len(self.scene["Enemies"]) == 0:
             global WAVE
@@ -233,7 +241,7 @@ class GameView(arcade.View):
                 self.stormhead.center_x = 7000
                 self.stormhead.center_y = 596
 
-                self.nightborne.center_x = 500
+                self.nightborne.center_x = 6500
                 self.nightborne.center_y = 560
                 self.nightborne.boundary_left = self.nightborne.center_x - (patrol_distance - rand)
                 self.nightborne.boundary_right = self.nightborne.center_x + rand
@@ -243,35 +251,6 @@ class GameView(arcade.View):
                 self.stormhead.boundary_right = self.stormhead.center_x + rand
             self.scene["Enemies"].enable_spatial_hashing()
         sword_direction = 1 if self.cat.direction == 0 else -1
-
-        x_dist = abs(self.cat.center_x - self.nightborne.center_x)
-        y_dist = abs(self.cat.center_y - self.nightborne.center_y)
-        self.nightborne.current_distance = pow(x_dist * x_dist + y_dist * y_dist, 0.5)
-
-        if self.nightborne.state == "Attack":
-            self.nightborne.change_x = 0
-        # if self.nightborne.state == "Cooldown":
-        #     if self.cat.center_x < self.nightborne.center_x:
-        #         self.nightborne.change_x = 1 * self.nightborne.attack_movement_speed
-        #     elif self.cat.center_x > self.nightborne.center_x:
-        #         self.nightborne.change_x = -1 * self.nightborne.attack_movement_speed
-        #     self.nightborne.state == "Idle"
-        elif self.nightborne.state == "Idle":
-            if abs(self.nightborne.center_y - self.cat.center_y) > self.nightborne.melee_attack_distance and abs(self.nightborne.center_x - self.cat.center_x) < self.nightborne.melee_attack_distance / 2:
-                self.nightborne.change_x = 0
-            elif self.nightborne.attack_distance > self.nightborne.current_distance > self.nightborne.melee_attack_distance:
-                if self.cat.center_x < self.nightborne.center_x:
-                    self.nightborne.change_x = -1 * self.nightborne.walk_speed
-                elif self.cat.center_x > self.nightborne.center_x:
-                    self.nightborne.change_x = 1 * self.nightborne.walk_speed
-            elif self.nightborne.current_distance <= self.nightborne.melee_attack_distance:
-                if self.cat.center_x + self.nightborne.melee_attack_distance < self.nightborne.center_x:
-                    self.nightborne.change_x = -1 * self.nightborne.attack_movement_speed
-                elif self.cat.center_x - self.nightborne.melee_attack_distance > self.nightborne.center_x:
-                    self.nightborne.change_x = 1 * self.nightborne.attack_movement_speed
-                self.nightborne.state = "Attack"
-            else:
-                self.nightborne.change_x = 0
 
         if "BLOCK" in SKILLS:
             if self.sword.block_timer > 0:
@@ -359,18 +338,26 @@ class GameView(arcade.View):
                     self.cat.current_animation_counter = 0
         elif arcade.check_for_collision_with_list(self.cat, self.scene["Enemies"]):
             if self.cat.cur_health > 0:
-                self.cat.cur_health -= 1  # RAT DAMAGE
+                self.cat.cur_health -= rat.damage  # RAT DAMAGE
+                self.cat.hurt_animation(delta_time)  # hurt animation
+                if self.cat.cur_health <= 0:
+                    self.cat.current_animation_counter = 0
+        elif arcade.check_for_collision_with_list(self.cat, self.scene["NightBorne"]):
+            if self.cat.cur_health > 0:
+                self.cat.cur_health -= self.scene["NightBorne"][0].damage
                 self.cat.hurt_animation(delta_time)  # hurt animation
                 if self.cat.cur_health <= 0:
                     self.cat.current_animation_counter = 0
         else:
             self.cat.update_animation()
 
+
         for bullet in self.scene["Bullets_Rats"]:
             bullet.bullet_life -= delta_time
             if bullet.bullet_life <= 0:
                 bullet.remove_from_sprite_lists()
 
+        # TODO: Update comment if this is not longer true: Damage from cat is handled only through bullets/swords
         for bullet in self.scene["Bullets"]:
             bullet.bullet_life -= delta_time
             if bullet.alpha > 0:
@@ -382,7 +369,7 @@ class GameView(arcade.View):
             bullet.texture = self.texture_list[bullet.frame]
             if bullet.bullet_life <= 0:
                 bullet.remove_from_sprite_lists()
-            collisions = arcade.check_for_collision_with_list(bullet, self.scene["Enemies"])
+            collisions = arcade.check_for_collision_with_lists(bullet, [self.scene["Enemies"], self.scene["NightBorne"]])
             for collision in collisions:
                 collision.show_health_timer = collision.show_health_time
                 if collision.cur_health >= 0:
