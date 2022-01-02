@@ -11,7 +11,7 @@ class Executioner(Enemy):
 
         self.current_animation_counter = 0
         self.change_x = 0
-        self.walk_speed = 10
+        self.walk_speed = 5
         self.attack_movement_speed = 20
 
         self.cooldown_time = 1  # in seconds

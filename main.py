@@ -13,7 +13,7 @@ import global_variables
 
 WIDTH = 1920
 HEIGHT = 1080
-SKILLS = []
+SKILLS = ["AOE", "BLOCK"]
 WAVE = 0
 
 
@@ -138,19 +138,21 @@ class GameView(arcade.View):
         self.camera.use()
         self.scene.draw(filter=GL_NEAREST)
         # self.scene["NightBorne"].draw_hit_boxes(color=arcade.color.RED, line_thickness=10)
-        self.scene["StormHead"].draw_hit_boxes(color=arcade.color.RED, line_thickness=10)
+        #self.scene["StormHead"].draw_hit_boxes(color=arcade.color.RED, line_thickness=10)
 
-        for rat in self.scene["Rats"]:
-            rat.draw_health_bar(rat.center_x, rat.center_y)  # TODO: The rectangles within here redraw from scratch which causes severe frame rate loss when > 10-20 health bars show.
+        number_of_enemies = len(self.scene["Rats"]) + len(self.scene["StormHead"]) + len(self.scene["NightBorne"]) + len(self.scene["Executioner"])
+        if number_of_enemies < 40:
+            for rat in self.scene["Rats"]:
+                rat.draw_health_bar(rat.center_x, rat.center_y)  # TODO: The rectangles within here redraw from scratch which causes severe frame rate loss when > 10-20 health bars show.
 
-        for stormhead in self.scene["StormHead"]:
-            stormhead.draw_health_bar(stormhead.center_x, stormhead.center_y)
+            for stormhead in self.scene["StormHead"]:
+                stormhead.draw_health_bar(stormhead.center_x, stormhead.center_y)
 
-        for nightborne in self.scene["NightBorne"]:
-            nightborne.draw_health_bar(nightborne.center_x, nightborne.center_y)
+            for nightborne in self.scene["NightBorne"]:
+                nightborne.draw_health_bar(nightborne.center_x, nightborne.center_y)
 
-        for executioner in self.scene["Executioner"]:
-            executioner.draw_health_bar(executioner.center_x, executioner.center_y)
+            for executioner in self.scene["Executioner"]:
+                executioner.draw_health_bar(executioner.center_x, executioner.center_y)
 
         self.camera_gui.use()
         self.cat.draw_health_bar(WIDTH / 2, HEIGHT - 50)
@@ -188,8 +190,29 @@ class GameView(arcade.View):
             self.scene.add_sprite("Bullets", bullet)
 
         if button == arcade.MOUSE_BUTTON_RIGHT and self.cat.cur_health > 0 and "BLOCK" in SKILLS:
+            # Block
             self.sword.block_timer = self.sword.block_time
             self.sword.block_radians = radians + math.pi
+
+            # Attack
+            number_of_bullets = 10
+            angle_clicked = math.atan2((self.screen_center_y + y) - self.cat.center_y, (self.screen_center_x + x) - self.cat.center_x)  # in radians
+            attack_angles = [angle_clicked + (random.random() - 0.5) * math.pi / 4 for i in range(number_of_bullets)]
+            
+            for angle in attack_angles:
+                bullet = arcade.Sprite(texture=self.texture_list[0], scale=1)
+
+                bullet.frame = random.randint(0, 4)
+                bullet.bullet_life = 0.3
+                speed = 40 + random.random() * 20
+                bullet.center_x = ((random.random() - 0.5) * 100 + self.cat.center_x) + math.cos(angle) * 50
+                bullet.center_y = ((random.random() - 0.5) * 100 + self.cat.center_y) + math.sin(angle) * 50
+
+                bullet.change_x = math.cos(angle) * speed
+                bullet.change_y = math.sin(angle) * speed
+                bullet.radians = angle
+
+                self.scene.add_sprite("Bullets", bullet)
 
     def on_mouse_motion(self, x: float, y: float, dx: float, dy: float):
         self.mouse_x = x
@@ -490,7 +513,7 @@ class GameView(arcade.View):
         movement_since_last_cycle = self.center_x_last_cycle - self.cat.center_x
 
         change_x_inifinity = self.cat.change_x * 0.95 if movement_since_last_cycle else 0
-        self.scene["Mountains"].move(change_x=change_x_inifinity, change_y=0)
+        self.scene["Mountains"].move(change_x=change_x_inifinity, change_y=0) # .move() is expensive according to docs. Seems to cause issues for us with > 100 enemies.
         self.scene["Moon"].move(change_x=change_x_inifinity, change_y=0)
 
         change_x_sand_dune = self.cat.change_x * 0.7 if movement_since_last_cycle else 0
