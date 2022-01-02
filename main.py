@@ -13,7 +13,7 @@ import global_variables
 
 WIDTH = 1920
 HEIGHT = 1080
-SKILLS = ["AOE", "BLOCK"]
+SKILLS = ["MULTIJUMP", "AOE", "BLOCK"]
 WAVE = 0
 
 
@@ -446,10 +446,9 @@ class GameView(arcade.View):
             WAVE += 1
 
             if WAVE > 0:
-                if WAVE > 5:
-                    self.wave_size == 200
-                else:
-                    self.wave_size += 1 + (WAVE - 1) * (WAVE - 1) * 5
+                self.wave_size += 1 + (WAVE - 1) * (WAVE - 1) * 5
+                if self.wave_size > 50:
+                    self.wave_size = 50
                 for i in range(self.wave_size):
                     rat = Rat()
                     rat.center_x = random.randrange(2000, 6500)
@@ -463,8 +462,11 @@ class GameView(arcade.View):
                     self.scene["Rats"].append(rat)
                 self.scene["Rats"].enable_spatial_hashing()
 
-            if WAVE == 5:
-                    for i in range(1):
+            if WAVE >= 5:
+                    self.wave_size += 1 + (WAVE - 5) * (WAVE - 5)
+                    if self.wave_size > 10:
+                        self.wave_size = 10
+                    for i in range(self.wave_size):
                         nightborne = NightBorne()
 
                         nightborne.center_x = 6500
@@ -475,8 +477,10 @@ class GameView(arcade.View):
                         nightborne.boundary_right = nightborne.center_x + rand
                     self.scene.add_sprite("NightBorne", nightborne)    # TODO: Uncomment to enable nightborne
 
-            elif WAVE > 10:
-                self.wave_size = (WAVE - 10) * (WAVE - 10)
+            if WAVE > 10:
+                self.wave_size += 1 + (WAVE - 10) * (WAVE - 10) * 5
+                if self.wave_size > 100:
+                    self.wave_size = 100
                 for i in range(self.wave_size):
                     executioner = Executioner()
                     executioner.center_x = random.randint(0, 10000)
