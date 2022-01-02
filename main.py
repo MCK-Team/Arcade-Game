@@ -52,6 +52,7 @@ class GameView(arcade.View):
 
         self.screen_center_x = None
         self.screen_center_y = None
+        self.center_x_last_cycle = None # For parallax
 
     def setup(self):
         self.camera = arcade.Camera(WIDTH, HEIGHT)
@@ -80,8 +81,10 @@ class GameView(arcade.View):
         self.tile_map = arcade.load_tilemap("assets/map/Map1.json", scaling=5, use_spatial_hash=True)
 
         # PLAYER POSITION
-        self.cat.center_x = 300
+        self.cat.center_x = 1000
         self.cat.center_y = 1300
+
+        self.center_x_last_cycle = self.cat.center_x
 
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
         self.scene.add_sprite_list("Rats", sprite_list=self.rat_list)
@@ -483,6 +486,24 @@ class GameView(arcade.View):
         if self.aoe_cooldown_timer > 0:
             self.aoe_cooldown_timer -= delta_time
 
+    def update_parallax(self):
+        movement_since_last_cycle = self.center_x_last_cycle - self.cat.center_x
+
+        change_x_inifinity = self.cat.change_x * 0.95 if movement_since_last_cycle else 0
+        self.scene["Mountains"].move(change_x=change_x_inifinity, change_y=0)
+        self.scene["Moon"].move(change_x=change_x_inifinity, change_y=0)
+
+        change_x_sand_dune = self.cat.change_x * 0.7 if movement_since_last_cycle else 0
+        self.scene["Sand Dune"].move(change_x=change_x_sand_dune, change_y=0)
+
+        change_x_clouds_crosses = self.cat.change_x * 0.7 if movement_since_last_cycle else 0
+        self.scene["Clouds"].move(change_x=change_x_clouds_crosses, change_y=0)
+
+        change_x_foreground = self.cat.change_x * -.2 if movement_since_last_cycle else 0
+        self.scene["Tile Layer 5"].move(change_x=change_x_foreground, change_y=0)
+
+        self.center_x_last_cycle = self.cat.center_x
+
     def utility_code(self):
         # Draw hitbox.
         # self.scene["StormHead"].update_hitbox()
@@ -523,6 +544,7 @@ class GameView(arcade.View):
         self.update_cat_cooldowns(delta_time)
         self.update_enemy_projectiles(delta_time)
         self.damage_to_cat(delta_time)
+        self.update_parallax()
 
 class ShopView(arcade.View):
     def __init__(self):
