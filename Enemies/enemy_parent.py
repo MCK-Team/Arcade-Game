@@ -2,7 +2,7 @@ import arcade
 
 
 class Enemy(arcade.Sprite):
-    def __init__(self, max_health=100, attack_distance=1500, melee_attack_distance=None, points=100, damage=10, cooldown=3):
+    def __init__(self, max_health=100, attack_distance=1500, melee_attack_distance=None, points=10, damage=10, cooldown=3):
         super().__init__()
         self.max_health = max_health
         self.cur_health = max_health

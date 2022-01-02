@@ -2,6 +2,8 @@ import arcade
 import arcade.gui
 import random
 import math
+
+from pyglet.gl.gl import GL_NEAREST
 from cat import Cat
 from Enemies.rat import Rat
 from Enemies.stormhead import StormHead
@@ -11,7 +13,7 @@ import global_variables
 
 WIDTH = 1920
 HEIGHT = 1080
-SKILLS = ["AOE", "BLOCK"]
+SKILLS = []
 WAVE = 0
 
 
@@ -20,6 +22,7 @@ class GameView(arcade.View):
         super().__init__()
 
         arcade.set_background_color(arcade.color.COAL)
+
 
         self.mouse_x = None
         self.mouse_y = None
@@ -34,9 +37,14 @@ class GameView(arcade.View):
         self.wave_size = None
         self.cursor_texture = None
 
+        self.aoe_cooldown_time = 0.2
+        self.aoe_cooldown_timer = None
+
         self.scene = None
         self.camera = None
         self.camera_gui = None
+        self.camera_shake_cooldown_time = None
+        self.camera_shake_cooldown_timer = None
         self.tile_map = None
         self.physics_engine = None
         self.wall = None
@@ -48,11 +56,19 @@ class GameView(arcade.View):
     def setup(self):
         self.camera = arcade.Camera(WIDTH, HEIGHT)
         self.camera_gui = arcade.Camera(WIDTH, HEIGHT)
+        self.camera_shake_cooldown_time = 0.2
+        self.camera_shake_cooldown_timer = 0
         self.change_screen_timer = 3
         self.mouse_x = 0
         self.mouse_y = 0
 
         self.wave_size = 0
+
+        # TODO: Uncomment to reset waves to start after dying.
+        # global WAVE
+        # WAVE = 0
+
+        self.aoe_cooldown_timer = 0
 
         self.cursor_texture = arcade.load_texture(file_name="assets/crosshair159dark.png", x=0, y=0, width=128, height=128, hit_box_algorithm="None")
 
@@ -68,7 +84,6 @@ class GameView(arcade.View):
         self.cat.center_y = 1300
 
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
-
         self.scene.add_sprite_list("Rats", sprite_list=self.rat_list)
         self.scene.add_sprite_list("NightBorne", arcade.SpriteList())
         self.scene.add_sprite_list("StormHead", arcade.SpriteList())
@@ -106,7 +121,10 @@ class GameView(arcade.View):
             gravity_constant=0.5
         )
 
-        self.physics_engine.enable_multi_jump(5)
+        if "MULTIJUMP" in SKILLS:
+            self.physics_engine.enable_multi_jump(5)
+        else:
+            self.physics_engine.enable_multi_jump(1)
 
         self.texture_list = []
         for i in list(range(2)):
@@ -115,7 +133,7 @@ class GameView(arcade.View):
     def on_draw(self):
         arcade.start_render()
         self.camera.use()
-        self.scene.draw()
+        self.scene.draw(filter=GL_NEAREST)
         # self.scene["NightBorne"].draw_hit_boxes(color=arcade.color.RED, line_thickness=10)
         self.scene["StormHead"].draw_hit_boxes(color=arcade.color.RED, line_thickness=10)
 
@@ -186,24 +204,26 @@ class GameView(arcade.View):
 
         elif key == arcade.key.E and self.cat.cur_health > 0 and "AOE" in SKILLS:
 
-            number_of_bullets = 50
-            angles = [(i + random.random()) * 2 * math.pi / number_of_bullets for i in range(number_of_bullets)]  # angle is in radians
-            speed = 20
+            if self.aoe_cooldown_timer <= 0:
+                self.aoe_cooldown_timer = self.aoe_cooldown_time
+                number_of_bullets = 50
+                angles = [(i + random.random()) * 2 * math.pi / number_of_bullets for i in range(number_of_bullets)]  # angle is in radians
+                speed = 20
 
-            for angle in angles:
-                bullet = arcade.Sprite(texture=self.texture_list[0], scale=1)
+                for angle in angles:
+                    bullet = arcade.Sprite(texture=self.texture_list[0], scale=1)
 
-                bullet.frame = random.randint(0, 4)
-                bullet.bullet_life = 0.5
+                    bullet.frame = random.randint(0, 4)
+                    bullet.bullet_life = 0.5
 
-                bullet.center_x = self.cat.center_x + math.cos(angle) * 50
-                bullet.center_y = self.cat.center_y + math.sin(angle) * 50
+                    bullet.center_x = self.cat.center_x + math.cos(angle) * 50
+                    bullet.center_y = self.cat.center_y + math.sin(angle) * 50
 
-                bullet.change_x = math.cos(angle) * speed
-                bullet.change_y = math.sin(angle) * speed
-                bullet.radians = angle
+                    bullet.change_x = math.cos(angle) * speed
+                    bullet.change_y = math.sin(angle) * speed
+                    bullet.radians = angle
 
-                self.scene.add_sprite("Bullets", bullet)
+                    self.scene.add_sprite("Bullets", bullet)
 
         # FOR TESTING REMOVE LATER
         elif key == arcade.key.R:
@@ -258,7 +278,7 @@ class GameView(arcade.View):
                 bullet_rats.bullet_life = 4
 
                 radians = math.atan2(self.cat.center_y - rat.center_y, self.cat.center_x - rat.center_x)
-                speed = 10
+                speed = 5
 
                 bullet_rats.center_x = rat.center_x + math.cos(radians) * 50
                 bullet_rats.center_y = rat.center_y + math.sin(radians) * 50
@@ -297,30 +317,31 @@ class GameView(arcade.View):
                 collision.remove_from_sprite_lists()
 
     def damage_to_cat(self, delta_time):
+        starting_health = self.cat.cur_health
+
         cat_rat_bullet_collisions = arcade.check_for_collision_with_list(self.cat, self.scene["Bullets_Rats"])
         if self.cat.cur_health <= 0:
             self.cat.change_x = 0
             self.cat.death_animation(delta_time)
 
             # TODO: Uncomment after debugging
-            # for _ in range(4):
-            #     if self.change_screen_timer > 0:
-            #         self.change_screen_timer -= delta_time    # Untested, switch back to this if doesn't work: 1 / (60 * 3)
-            #     else:
-            #         view = ShopView()
-            #         self.window.show_view(view)
-            #         self.window.set_mouse_visible(True)
+            for _ in range(4):
+                if self.change_screen_timer > 0:
+                    self.change_screen_timer -= delta_time    # Untested, switch back to this if doesn't work: 1 / (60 * 3)
+                else:
+                    view = ShopView()
+                    self.window.show_view(view)
+                    self.window.set_mouse_visible(True)
         elif cat_rat_bullet_collisions:
             for bullet in cat_rat_bullet_collisions:
                 bullet.remove_from_sprite_lists()
-            if self.cat.cur_health > 0:
-                self.cat.cur_health -= 1  # RAT DAMAGE
+                self.cat.cur_health -= 1  # Damage from rat bullets
                 self.cat.hurt_animation(delta_time)  # hurt animation
                 if self.cat.cur_health <= 0:
                     self.cat.current_animation_counter = 0
         elif arcade.check_for_collision_with_list(self.cat, self.scene["Rats"]):
             if self.cat.cur_health > 0:
-                self.cat.cur_health -= self.scene["Rats"][0].damage * delta_time * 60 # RAT DAMAGE
+                self.cat.cur_health -= self.scene["Rats"][0].damage * delta_time * 60 # Damage from rat melee
                 self.cat.hurt_animation(delta_time)  # hurt animation
                 if self.cat.cur_health <= 0:
                     self.cat.current_animation_counter = 0
@@ -344,6 +365,22 @@ class GameView(arcade.View):
                     self.cat.current_animation_counter = 0
         elif self.cat.cur_health > 0:
             self.cat.update_animation()
+
+        ending_health = self.cat.cur_health
+
+        damage_taken = starting_health - ending_health if starting_health - ending_health > 0 else 0
+        if self.camera_shake_cooldown_timer > 0:
+            self.camera_shake_cooldown_timer -= delta_time
+        
+        if damage_taken > 0 and self.camera_shake_cooldown_timer <= 0: # If damage was taken
+            self.camera_shake_cooldown_timer = self.camera_shake_cooldown_time
+            # Sample random shake code from documentation: https://api.arcade.academy/en/2.6.2/examples/sprite_move_scrolling_shake.html
+            shake_direction = 2 * math.pi * random.random()
+            shake_amplitude = 10.0
+            shake_speed = 10.0
+            shake_damping = 0.8
+            shake_vector = math.cos(shake_direction) * shake_amplitude, math.sin(shake_direction) * shake_amplitude
+            self.camera.shake(shake_vector, speed=shake_speed, damping=shake_damping)
 
         if self.cat.cur_health < 0:
             self.cat.cur_health = 0
@@ -370,7 +407,7 @@ class GameView(arcade.View):
             for collision in collisions:
                 collision.show_health_timer = collision.show_health_time
                 if collision.cur_health >= 0:
-                    collision.cur_health -= 20
+                    collision.cur_health -= 5
                 if collision.cur_health <= 0:
                     if not isinstance(collision, NightBorne) and not isinstance(collision, StormHead) and not isinstance(collision, Executioner):
                         collision.remove_from_sprite_lists()
@@ -382,8 +419,11 @@ class GameView(arcade.View):
             global WAVE
             WAVE += 1
 
-            if WAVE == 1:
-                self.wave_size += 10 * WAVE
+            if WAVE > 0:
+                if WAVE > 5:
+                    self.wave_size == 200
+                else:
+                    self.wave_size += 1 + (WAVE - 1) * (WAVE - 1) * 5
                 for i in range(self.wave_size):
                     rat = Rat()
                     rat.center_x = random.randrange(2000, 6500)
@@ -392,23 +432,25 @@ class GameView(arcade.View):
                     rand = random.randint(0, patrol_distance)
                     rat.boundary_left = rat.center_x - (patrol_distance - rand)
                     rat.boundary_right = rat.center_x + rand
+                    if WAVE > 3:
+                        rat.attack_distance = 2000
                     self.scene["Rats"].append(rat)
                 self.scene["Rats"].enable_spatial_hashing()
-                #self.scene["StormHead"].enable_spatial_hashing()
-                #self.scene["NightBorne"].enable_spatial_hashing()
 
-                for i in range(1):
-                    nightborne = NightBorne()
+            if WAVE == 5:
+                    for i in range(1):
+                        nightborne = NightBorne()
 
-                    nightborne.center_x = 1500
-                    nightborne.center_y = 560
-                    nightborne.boundary_left = nightborne.center_x - (patrol_distance - rand)
-                    nightborne.boundary_right = nightborne.center_x + rand
-
+                        nightborne.center_x = 6500
+                        nightborne.center_y = 560
+                        rand = random.randint(0, patrol_distance)
+                        patrol_distance = 500
+                        nightborne.boundary_left = nightborne.center_x - (patrol_distance - rand) # center_x - (patrol_distance - rand)
+                        nightborne.boundary_right = nightborne.center_x + rand
                     self.scene.add_sprite("NightBorne", nightborne)    # TODO: Uncomment to enable nightborne
 
-            elif WAVE >= 2:
-                self.wave_size = WAVE * WAVE
+            elif WAVE > 10:
+                self.wave_size = (WAVE - 10) * (WAVE - 10)
                 for i in range(self.wave_size):
                     executioner = Executioner()
                     executioner.center_x = random.randint(0, 10000)
@@ -436,6 +478,10 @@ class GameView(arcade.View):
                 # # self.scene.add_sprite("StormHead", stormhead)
                 # # self.scene.add_sprite("Executioner", executioner)
                 # # self.scene.add_sprite("NightBorne", nightborne)    # TODO: Uncomment to enable nightborne
+    
+    def update_cat_cooldowns(self, delta_time):
+        if self.aoe_cooldown_timer > 0:
+            self.aoe_cooldown_timer -= delta_time
 
     def utility_code(self):
         # Draw hitbox.
@@ -472,9 +518,9 @@ class GameView(arcade.View):
         self.scene.update()
         self.spawn_wave()
         self.update_enemies(delta_time)
-
         self.update_cat_sword(delta_time)
         self.update_cat_projectiles(delta_time)
+        self.update_cat_cooldowns(delta_time)
         self.update_enemy_projectiles(delta_time)
         self.damage_to_cat(delta_time)
 
@@ -506,10 +552,9 @@ class ShopView(arcade.View):
 
         @aoe.event('on_click')
         def on_click_aoe(event):
-            global SCORE
-            if SCORE >= 500 and "AOE" not in SKILLS:
+            if global_variables.SCORE >= 500 and "AOE" not in SKILLS:
                 SKILLS.append('AOE')
-                SCORE -= 500
+                global_variables.SCORE -= 500
             elif "AOE" in SKILLS:
                 print("ALREADY PURCHASED")
                 purchased = arcade.gui.UITextArea(text="already purchased!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.RED)
@@ -524,11 +569,27 @@ class ShopView(arcade.View):
 
         @sword.event('on_click')
         def on_click_sword(event):
-            global SCORE
-            if SCORE >= 1000 and "BLOCK" not in SKILLS:
+            if global_variables.SCORE >= 1000 and "BLOCK" not in SKILLS:
                 SKILLS.append('BLOCK')
-                SCORE -= 1000
+                global_variables.SCORE -= 1000
             elif "BLOCK" in SKILLS:
+                print("ALREADY PURCHASED")
+                purchased = arcade.gui.UITextArea(text="Already purchased!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.RED)
+                self.v_box.add(purchased.with_space_around(bottom=5))
+            else:
+                print("NOT ENOUGH POINTS")
+                not_enough = arcade.gui.UITextArea(text="Not enough points!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.RED)
+                self.v_box.add(not_enough.with_space_around(bottom=5))
+
+        multijump = arcade.gui.UIFlatButton(text='Multi-Jump', width=150)
+        self.v_box.add(multijump.with_space_around(bottom=10))
+
+        @multijump.event('on_click')
+        def on_click_multijump(event):
+            if global_variables.SCORE >= 1000 and "MULTIJUMP" not in SKILLS:
+                SKILLS.append('MULTIJUMP')
+                global_variables.SCORE -= 1000
+            elif "MULTIJUMP" in SKILLS:
                 print("ALREADY PURCHASED")
                 purchased = arcade.gui.UITextArea(text="Already purchased!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.RED)
                 self.v_box.add(purchased.with_space_around(bottom=5))
@@ -544,9 +605,9 @@ class ShopView(arcade.View):
         def on_click_start(event):
             self.manager.disable()
             game_view = GameView()
+            game_view.setup()
             self.window.show_view(game_view)
             self.window.set_mouse_visible(False)
-            game_view.setup()
 
         self.manager.add(
             arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y", child=self.v_box))
@@ -558,7 +619,7 @@ class ShopView(arcade.View):
     def on_draw(self):
         arcade.start_render()
         self.manager.draw()
-        score = f"Score: {SCORE}"
+        score = f"Score: {global_variables.SCORE}"
         arcade.draw_text(score, WIDTH / 4, HEIGHT - 60, color=arcade.color.BLACK, font_size=20, font_name="Kenney Future")
 
 

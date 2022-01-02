@@ -5,7 +5,7 @@ from Enemies.enemy_parent import Enemy
 
 class Rat(Enemy):
     def __init__(self):
-        super().__init__(max_health=50, attack_distance=500, points=100)
+        super().__init__(max_health=50, attack_distance=500, points=10, damage=0.2)
 
         self.current_animation_counter = 0
         self.change_x = random.random() * 4 + 2

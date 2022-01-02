@@ -7,7 +7,7 @@ import global_variables
 
 class Executioner(Enemy):
     def __init__(self):
-        super().__init__(max_health=1000, attack_distance=1000, melee_attack_distance=100, points=1000, damage=30)
+        super().__init__(max_health=1000, attack_distance=1000, melee_attack_distance=100, points=50, damage=0.2)
 
         self.current_animation_counter = 0
         self.change_x = 0
@@ -37,7 +37,7 @@ class Executioner(Enemy):
         for i in range(10):
             self.death_textures_pair[1].append(arcade.load_texture("assets/Undead_executioner_puppet/png/death.png", x=i * 100, y=0, width=100, height=100, flipped_horizontally=True, hit_box_algorithm="Simple"))
 
-        self.scale = 3.5
+        self.scale = 2
 
     def update_animation(self, delta_time: float = 1 / 60):
 

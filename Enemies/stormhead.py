@@ -6,7 +6,7 @@ import global_variables
 
 class StormHead(Enemy):
     def __init__(self):
-        super().__init__(max_health=1000, attack_distance=1000, melee_attack_distance=300, points=1000, damage=50)
+        super().__init__(max_health=1000, attack_distance=1000, melee_attack_distance=300, points=100, damage=10)
 
         self.current_animation_counter = 0
         self.change_x = 0
