@@ -52,7 +52,7 @@ class Cat(arcade.Sprite):
         health_width = width * (self.cur_health / self.max_health)
         arcade.draw_rectangle_filled(center_x=x - 0.5 * (width - health_width), center_y=y, width=health_width, height=20, color=arcade.color.GREEN)
 
-        arcade.draw_text(f"{self.cur_health}", start_x=x, start_y=y - 5, font_size=12, font_name="Kenney Rocket", color=arcade.color.BLACK)
+        arcade.draw_text(f"{int(self.cur_health)}", start_x=x, start_y=y - 5, font_size=12, font_name="Kenney Rocket", color=arcade.color.BLACK)
 
     def update_animation(self, delta_time: float = 1 / 60):
         if self.change_x > 0:
@@ -66,51 +66,37 @@ class Cat(arcade.Sprite):
             self.current_animation_counter += 1
             if self.current_animation_counter >= 1/(delta_time*5)*4:  # [60 fps] * [4 frames] / [5 animation fps]
                 self.current_animation_counter = 0
-            current_animation_frame = self.current_animation_counter // (1/(delta_time*5))  # Todo refactor this
+            current_animation_frame = int(self.current_animation_counter // (1/(delta_time*5)))  # Todo refactor this
 
-            if current_animation_frame == 0:
-                self.texture = self.idle_textures_pair[self.direction][0]
-            elif current_animation_frame == 1:
-                self.texture = self.idle_textures_pair[self.direction][1]
-            elif current_animation_frame == 2:
-                self.texture = self.idle_textures_pair[self.direction][2]
-            elif current_animation_frame == 3:
-                self.texture = self.idle_textures_pair[self.direction][3]
+            self.texture = self.idle_textures_pair[self.direction][current_animation_frame]
 
         # Run Animation
-        if abs(self.change_x) > 0:
+        elif abs(self.change_x) > 0 and self.change_y == 0:
 
             self.current_animation_counter += 1
             if self.current_animation_counter >= 1/(delta_time*20)*6:  # [60 fps] * [4 frames] / [5 animation fps]
                 self.current_animation_counter = 0
-            current_animation_frame = self.current_animation_counter // (1/(delta_time*20))  # Todo refactor this
+            current_animation_frame = int(self.current_animation_counter // (1/(delta_time*20))) # Todo refactor this
 
-            if current_animation_frame == 0:
-                self.texture = self.running_textures_pair[self.direction][0]
-            elif current_animation_frame == 1:
-                self.texture = self.running_textures_pair[self.direction][1]
-            elif current_animation_frame == 2:
-                self.texture = self.running_textures_pair[self.direction][2]
-            elif current_animation_frame == 3:
-                self.texture = self.running_textures_pair[self.direction][3]
-            elif current_animation_frame == 4:
-                self.texture = self.running_textures_pair[self.direction][4]
-            elif current_animation_frame == 5:
-                self.texture = self.running_textures_pair[self.direction][5]
+            self.texture = self.running_textures_pair[self.direction][current_animation_frame]
+
+        elif self.change_y > 0:
+            self.texture = self.running_textures_pair[self.direction][2]
+
+        elif self.change_y == 0:
+            self.texture = self.running_textures_pair[self.direction][3]
+
+        elif self.change_y < 0:
+            self.texture = self.running_textures_pair[self.direction][4]
 
     def death_animation(self, delta_time):
         # Dead Animation
         self.current_animation_counter += 1
-        current_animation_frame = self.current_animation_counter // (1/(delta_time*5))  # Todo refactor this
+        current_animation_frame = int(self.current_animation_counter // (1/(delta_time*15)))  # Todo refactor this
+        if current_animation_frame > 3:
+            current_animation_frame = 3
 
-        if current_animation_frame == 0:
-            self.texture = self.death_textures_pair[self.direction][0]
-        elif current_animation_frame == 1:
-            self.texture = self.death_textures_pair[self.direction][1]
-        elif current_animation_frame == 2:
-            self.texture = self.death_textures_pair[self.direction][2]
-        elif current_animation_frame >= 3:
-            self.texture = self.death_textures_pair[self.direction][3]
+        self.texture = self.death_textures_pair[self.direction][current_animation_frame]
 
     # Hurt Animation
     def hurt_animation(self, delta_time):

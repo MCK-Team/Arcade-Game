@@ -38,6 +38,7 @@ class MenuView(arcade.View):
             self.manager.disable()
             game_view = GameView()
             self.window.show_view(game_view)
+            self.window.set_mouse_visible(False)
             game_view.setup()
 
         @how_button.event('on_click')
@@ -69,19 +70,7 @@ class MenuView(arcade.View):
         self.current_animation_counter += 1
         if self.current_animation_counter >= 1/(delta_time*5)*7:  # [60 fps] * [7 frames] / [5 animation fps]
             self.current_animation_counter = 0
-        current_animation_frame = self.current_animation_counter // (1/(delta_time*5))  # Todo refactor this
+        current_animation_frame = int(self.current_animation_counter // (1/(delta_time*5)))  # Todo refactor this
 
-        if current_animation_frame == 0:
-            self.texture = self.background[0]
-        elif current_animation_frame == 1:
-            self.texture = self.background[1]
-        elif current_animation_frame == 2:
-            self.texture = self.background[2]
-        elif current_animation_frame == 3:
-            self.texture = self.background[3]
-        elif current_animation_frame == 4:
-            self.texture = self.background[4]
-        elif current_animation_frame == 5:
-            self.texture = self.background[5]
-        elif current_animation_frame == 6:
-            self.texture = self.background[6]
+        self.texture = self.background[current_animation_frame]
+
