@@ -11,9 +11,9 @@ from Enemies.nightborne import NightBorne
 from Enemies.excutioner import Executioner
 import global_variables
 
-WIDTH = 1920
-HEIGHT = 1080
-SKILLS = ["MULTIJUMP", "AOE", "BLOCK"]
+WIDTH = 1920  # or 1920
+HEIGHT = 1080  # or 1080
+SKILLS = []
 WAVE = 0
 
 
@@ -65,9 +65,10 @@ class GameView(arcade.View):
 
         self.wave_size = 0
 
-        # TODO: Uncomment to reset waves to start after dying.
-        # global WAVE
-        # WAVE = 0
+        # TODO: Comment/Uncomment to reset waves to start after dying.
+        global SKILLS
+        global WAVE
+        WAVE = 0
 
         self.aoe_cooldown_timer = 0
 
@@ -140,8 +141,11 @@ class GameView(arcade.View):
         # self.scene["NightBorne"].draw_hit_boxes(color=arcade.color.RED, line_thickness=10)
         #self.scene["StormHead"].draw_hit_boxes(color=arcade.color.RED, line_thickness=10)
 
-        number_of_enemies = len(self.scene["Rats"]) + len(self.scene["StormHead"]) + len(self.scene["NightBorne"]) + len(self.scene["Executioner"])
-        if number_of_enemies < 40:
+        hp_bars_count = sum([enemy.show_health_timer > 0 for enemy in self.scene["Rats"]])
+        hp_bars_count += sum([enemy.show_health_timer > 0 for enemy in self.scene["NightBorne"]])
+        hp_bars_count += sum([enemy.show_health_timer > 0 for enemy in self.scene["Executioner"]])
+        hp_bars_count += sum([enemy.show_health_timer > 0 for enemy in self.scene["StormHead"]])
+        if hp_bars_count < 20:
             for rat in self.scene["Rats"]:
                 rat.draw_health_bar(rat.center_x, rat.center_y)  # TODO: The rectangles within here redraw from scratch which causes severe frame rate loss when > 10-20 health bars show.
 
@@ -219,6 +223,7 @@ class GameView(arcade.View):
         self.mouse_y = y
 
     def on_key_press(self, key, modifiers):
+        global SKILLS
         if (key == arcade.key.RIGHT or key == arcade.key.D) and self.cat.cur_health > 0:
             self.cat.change_x = 8
         elif (key == arcade.key.LEFT or key == arcade.key.A) and self.cat.cur_health > 0:
@@ -253,7 +258,10 @@ class GameView(arcade.View):
 
         # FOR TESTING REMOVE LATER
         elif key == arcade.key.R:
+            SKILLS = ["AOE", "MULTIJUMP", "BLOCK"]
             self.setup()
+            global WAVE
+            WAVE = 15
         elif key == arcade.key.ESCAPE:
             arcade.exit()
 
@@ -446,9 +454,9 @@ class GameView(arcade.View):
             WAVE += 1
 
             if WAVE > 0:
-                self.wave_size += 1 + (WAVE - 1) * (WAVE - 1) * 5
-                if self.wave_size > 50:
-                    self.wave_size = 50
+                self.wave_size += 10 + (WAVE - 1) * (WAVE - 1) * 5
+                if self.wave_size > 30:
+                    self.wave_size = 30
                 for i in range(self.wave_size):
                     rat = Rat()
                     rat.center_x = random.randrange(2000, 6500)
@@ -463,51 +471,46 @@ class GameView(arcade.View):
                 self.scene["Rats"].enable_spatial_hashing()
 
             if WAVE >= 5:
-                    self.wave_size += 1 + (WAVE - 5) * (WAVE - 5)
-                    if self.wave_size > 10:
-                        self.wave_size = 10
-                    for i in range(self.wave_size):
-                        nightborne = NightBorne()
+                self.wave_size += 1 + (WAVE - 5) * (WAVE - 5)
+                if self.wave_size > 5:
+                    self.wave_size = 5
+                for i in range(self.wave_size):
+                    nightborne = NightBorne()
+                    nightborne.center_x = random.randrange(2000, 7000)
+                    nightborne.center_y = 560
+                    patrol_distance = random.randint(200, 750)  # TODO: Refactor patrol distance and boundaries into enemy class
+                    rand = random.randint(0, patrol_distance)
+                    nightborne.boundary_left = nightborne.center_x - (patrol_distance - rand) # center_x - (patrol_distance - rand)
+                    nightborne.boundary_right = nightborne.center_x + rand
+                    self.scene["NightBorne"].append(nightborne)    # TODO: Uncomment to enable nightborne
+                self.scene["NightBorne"].enable_spatial_hashing()
 
-                        nightborne.center_x = 6500
-                        nightborne.center_y = 560
-                        rand = random.randint(0, patrol_distance)
-                        patrol_distance = 500
-                        nightborne.boundary_left = nightborne.center_x - (patrol_distance - rand) # center_x - (patrol_distance - rand)
-                        nightborne.boundary_right = nightborne.center_x + rand
-                    self.scene.add_sprite("NightBorne", nightborne)    # TODO: Uncomment to enable nightborne
+            if 2 <= WAVE < 5:
+                self.wave_size += 1 + (WAVE - 2) * (WAVE - 2)
+                if self.wave_size > 5:
+                    self.wave_size = 5
+                for i in range(self.wave_size):
+                    stormhead = StormHead()
+
+                    stormhead.center_x = random.randrange(2000, 7000)
+                    stormhead.center_y = 680
+                    patrol_distance = random.randint(200, 750)  # TODO: Refactor patrol distance and boundaries into enemy class
+                    rand = random.randint(0, patrol_distance)
+                    stormhead.boundary_left = stormhead.center_x - (patrol_distance - rand) # center_x - (patrol_distance - rand)
+                    stormhead.boundary_right = stormhead.center_x + rand
+                    self.scene["StormHead"].append(stormhead)    # TODO: Uncomment to enable nightborne
+            self.scene["StormHead"].enable_spatial_hashing()
 
             if WAVE > 10:
                 self.wave_size += 1 + (WAVE - 10) * (WAVE - 10) * 5
-                if self.wave_size > 100:
-                    self.wave_size = 100
+                if self.wave_size > 30:
+                    self.wave_size = 30
                 for i in range(self.wave_size):
                     executioner = Executioner()
                     executioner.center_x = random.randint(0, 10000)
                     executioner.center_y = random.randint(1000, 5000)
                     self.scene["Executioner"].append(executioner)
                 self.scene["Executioner"].enable_spatial_hashing()
-
-                # executioner = Executioner()
-                #
-                # stormhead.center_x = 700
-                # stormhead.center_y = 694
-                # stormhead.boundary_left = stormhead.center_x - (patrol_distance - rand)
-                # stormhead.boundary_right = stormhead.center_x + rand
-                #
-                # nightborne.center_x = 1500
-                # nightborne.center_y = 560
-                # nightborne.boundary_left = nightborne.center_x - (patrol_distance - rand)
-                # nightborne.boundary_right = nightborne.center_x + rand
-                #
-                # executioner.center_x = 1000
-                # executioner.center_y = 1200
-                # executioner.boundary_left = executioner.center_x - (patrol_distance - rand)
-                # executioner.boundary_right = executioner.center_x + rand
-                #
-                # # self.scene.add_sprite("StormHead", stormhead)
-                # # self.scene.add_sprite("Executioner", executioner)
-                # # self.scene.add_sprite("NightBorne", nightborne)    # TODO: Uncomment to enable nightborne
     
     def update_cat_cooldowns(self, delta_time):
         if self.aoe_cooldown_timer > 0:
@@ -573,30 +576,29 @@ class GameView(arcade.View):
         self.damage_to_cat(delta_time)
         self.update_parallax()
 
+
 class ShopView(arcade.View):
     def __init__(self):
         super().__init__()
         self.manager = arcade.gui.UIManager()
         self.manager.enable()
         self.v_box = arcade.gui.UIBoxLayout()
+        self.current_animation_counter = 0
+
         self.background = []
         for i in range(7):
             self.background.append(arcade.load_texture(f"assets/background/noonbackground{i + 1}.png", x=0, y=0, width=1024, height=768))
         self.texture = self.background[0]
 
-        title_text = arcade.gui.UITextArea(text="Welcome to the shop!", width=600, height=50, font_size=20, font_name="Kenney Future")
-        self.v_box.add(title_text.with_space_around(bottom=5))
+        arcade.set_background_color(arcade.color.AMETHYST)
 
-        abilities = """
-                Choose An ability you wish to Purchase:
-                 
-                500 Points for Radial Attack: 'E'
-                1000 Points for Protective Sword """
+        title_text = arcade.gui.UITextArea(text="Welcome to the shop!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.BLACK)
+        self.v_box.add(title_text.with_space_around(bottom=5, left=220))
 
-        ability_text = arcade.gui.UITextArea(text=abilities, width=500, height=140, font_size=14, font_name="Arial")
-        self.v_box.add(ability_text.with_space_around(bottom=2))
+        ability_text = arcade.gui.UITextArea(text="Purchase Abilities", width=500, height=140, font_size=15, font_name="Kenney Future", text_color=arcade.color.BLACK)
+        self.v_box.add(ability_text.with_space_around(bottom=2, left=240))
 
-        aoe = arcade.gui.UIFlatButton(text='Radial Attack', width=150)
+        aoe = arcade.gui.UIFlatButton(text='Radial Attack\nCost: 500', width=200)
         self.v_box.add(aoe.with_space_around(bottom=10))
 
         @aoe.event('on_click')
@@ -613,7 +615,7 @@ class ShopView(arcade.View):
                 not_enough = arcade.gui.UITextArea(text="not enough points!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.RED)
                 self.v_box.add(not_enough.with_space_around(bottom=5))
 
-        sword = arcade.gui.UIFlatButton(text='Protective Sword', width=150)
+        sword = arcade.gui.UIFlatButton(text='Protective Sword\nCost: 1000', width=200)
         self.v_box.add(sword.with_space_around(bottom=10))
 
         @sword.event('on_click')
@@ -630,7 +632,7 @@ class ShopView(arcade.View):
                 not_enough = arcade.gui.UITextArea(text="Not enough points!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.RED)
                 self.v_box.add(not_enough.with_space_around(bottom=5))
 
-        multijump = arcade.gui.UIFlatButton(text='Multi-Jump', width=150)
+        multijump = arcade.gui.UIFlatButton(text='Multi-Jump\nCost: 1000', width=200)
         self.v_box.add(multijump.with_space_around(bottom=10))
 
         @multijump.event('on_click')
@@ -662,19 +664,29 @@ class ShopView(arcade.View):
             arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y", child=self.v_box))
 
     def on_show(self):
-        arcade.set_background_color(arcade.color.AMETHYST)
         arcade.set_viewport(0, self.window.width, 0, self.window.height)
 
     def on_draw(self):
         arcade.start_render()
+        arcade.draw_lrwh_rectangle_textured(0, 0, WIDTH, HEIGHT, self.texture)
         self.manager.draw()
         score = f"Score: {global_variables.SCORE}"
         arcade.draw_text(score, WIDTH / 4, HEIGHT - 60, color=arcade.color.BLACK, font_size=20, font_name="Kenney Future")
 
+    def on_update(self, delta_time):
+        self.update_animation()
+
+    def update_animation(self, delta_time: float = 1 / 60):
+        self.current_animation_counter += 1
+        if self.current_animation_counter >= 1/(delta_time*5)*7:  # [60 fps] * [7 frames] / [5 animation fps]
+            self.current_animation_counter = 0
+        current_animation_frame = int(self.current_animation_counter // (1/(delta_time*5)))  # Todo refactor this
+        self.texture = self.background[current_animation_frame]
+
 
 def main():
     from menu import MenuView
-    window = arcade.Window(WIDTH, HEIGHT, "Arcade Game", vsync=True, antialiasing=False)
+    window = arcade.Window(WIDTH, HEIGHT, "Arcade Game", vsync=True, antialiasing=False, resizable=True)
     start_view = MenuView()
     window.show_view(start_view)
     arcade.run()

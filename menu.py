@@ -1,8 +1,8 @@
 import arcade
 import arcade.gui
 
-WIDTH = 1920
-HEIGHT = 1080
+WIDTH = 2560  # or 1920
+HEIGHT = 1440  # or 1080
 
 
 class MenuView(arcade.View):
@@ -71,6 +71,4 @@ class MenuView(arcade.View):
         if self.current_animation_counter >= 1/(delta_time*5)*7:  # [60 fps] * [7 frames] / [5 animation fps]
             self.current_animation_counter = 0
         current_animation_frame = int(self.current_animation_counter // (1/(delta_time*5)))  # Todo refactor this
-
         self.texture = self.background[current_animation_frame]
-

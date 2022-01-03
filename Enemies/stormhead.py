@@ -53,7 +53,7 @@ class StormHead(Enemy):
                 self.direction = 0   # Right
             if self.change_x < 0:
                 self.direction = 1   # Left
-
+            self.change_x = 0
             self.current_animation_counter += 1
             animation_speed = 5
             current_death_frame = int(self.current_animation_counter // (1 / (delta_time * animation_speed)))  # Todo refactor this
@@ -140,4 +140,3 @@ class StormHead(Enemy):
         print('on_update')
         if self.cooldown_timer > 0:
             self.cooldown_timer -= delta_time
-

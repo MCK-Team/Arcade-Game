@@ -1,8 +1,8 @@
 import arcade
 import arcade.gui
 
-WIDTH = 1920
-HEIGHT = 1080
+WIDTH = 2560  # or 1920
+HEIGHT = 1440  # or 1080
 
 
 class HowTO(arcade.View):
@@ -20,19 +20,23 @@ class HowTO(arcade.View):
 
         instructions = "The Goal is to kill all enemies and improve your skills throughout your journey"
 
-        instruction_label = arcade.gui.UITextArea(text=instructions, width=350, height=70, font_size=14, font_name="Arial",  text_color=arcade.color.BLACK)
-        self.v_box.add(instruction_label.with_space_around(bottom=10))
+        instruction_label = arcade.gui.UITextArea(text=instructions, width=1200, height=80, font_size=14, font_name="Kenney Future",  text_color=arcade.color.BLACK)
+        self.v_box.add(instruction_label.with_space_around(bottom=10, left=200))
 
         keys = """
-          HOW TO PLAY
+          Controls
         -------------------------
-        A / Left Arrow: left
-        W / Space : Jump
-        D / Right Arrow: Right
-        Left Click: Shoot """
+        Move Left: A / Left Arrow
+        Move Right: D / Right Arrow
+        Jump: W / Space
+        Shoot: Left Click
+        Protective Sword: Right Click
+        Cone Shot: Right Click
+        Radial Attack: E
+        """
 
-        key_text = arcade.gui.UITextArea(text=keys, width=500, height=240, font_size=14, font_name="Arial", text_color=arcade.color.BLACK)
-        self.v_box.add(key_text.with_space_around(bottom=2, left=1000))
+        key_text = arcade.gui.UITextArea(text=keys, width=500, height=240, font_size=14, font_name="Kenney Future", text_color=arcade.color.BLACK)
+        self.v_box.add(key_text.with_space_around(bottom=20, left=100))
 
         back_button = arcade.gui.UIFlatButton(text="Back", width=150)
         self.v_box.add(back_button.with_space_around(bottom=10))
@@ -63,19 +67,5 @@ class HowTO(arcade.View):
         self.current_animation_counter += 1
         if self.current_animation_counter >= 1/(delta_time*5)*7:  # [60 fps] * [7 frames] / [5 animation fps]
             self.current_animation_counter = 0
-        current_animation_frame = self.current_animation_counter // (1/(delta_time*5))  # Todo refactor this
-
-        if current_animation_frame == 0:
-            self.texture = self.background[0]
-        elif current_animation_frame == 1:
-            self.texture = self.background[1]
-        elif current_animation_frame == 2:
-            self.texture = self.background[2]
-        elif current_animation_frame == 3:
-            self.texture = self.background[3]
-        elif current_animation_frame == 4:
-            self.texture = self.background[4]
-        elif current_animation_frame == 5:
-            self.texture = self.background[5]
-        elif current_animation_frame == 6:
-            self.texture = self.background[6]
+        current_animation_frame = int(self.current_animation_counter // (1/(delta_time*5)))  # Todo refactor this
+        self.texture = self.background[current_animation_frame]
