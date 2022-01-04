@@ -4,16 +4,17 @@ import random
 import math
 
 from pyglet.gl.gl import GL_NEAREST
-from cat import Cat
+from cat import Cat, Healing
 from Enemies.rat import Rat
 from Enemies.stormhead import StormHead
 from Enemies.nightborne import NightBorne
 from Enemies.excutioner import Executioner
 import global_variables
 
-WIDTH = 1920  # or 1920
-HEIGHT = 1080  # or 1080
+WIDTH = 2560  # or 1920
+HEIGHT = 1440  # or 1080
 SKILLS = []
+#SKILLS = ["AOE", "BLOCK", "HEAL", "MULTIJUMP"]
 WAVE = 0
 
 
@@ -36,6 +37,8 @@ class GameView(arcade.View):
         self.ground_list = None
         self.wave_size = None
         self.cursor_texture = None
+        self.offset_sprites = None
+        self.offset_sprites_y = None
 
         self.aoe_cooldown_time = 0.2
         self.aoe_cooldown_timer = None
@@ -62,6 +65,8 @@ class GameView(arcade.View):
         self.change_screen_timer = 3
         self.mouse_x = 0
         self.mouse_y = 0
+        self.offset_sprites = 1000
+        self.offset_sprites_y = 400
 
         self.wave_size = 0
 
@@ -82,8 +87,10 @@ class GameView(arcade.View):
         self.tile_map = arcade.load_tilemap("assets/map/Map1.json", scaling=5, use_spatial_hash=True)
 
         # PLAYER POSITION
-        self.cat.center_x = 1000
+        self.cat.center_x = 1000 + self.offset_sprites
         self.cat.center_y = 1300
+        self.cat.boundary_left = 1317
+        self.cat.boundary_right = 9111
 
         self.center_x_last_cycle = self.cat.center_x
 
@@ -93,17 +100,18 @@ class GameView(arcade.View):
         self.scene.add_sprite_list("StormHead", arcade.SpriteList())
         self.scene.add_sprite_list("Executioner", arcade.SpriteList())
         self.scene.add_sprite("Cat", self.cat)
+        self.scene.add_sprite("Healing", arcade.Sprite())
         self.scene.add_sprite_list("Bullets", sprite_list=self.bullet_list)
         self.scene.add_sprite_list("Bullets_Rats", sprite_list=arcade.SpriteList())
 
         # Procedural generation.
         procedural_scale = 4
         for x in range(0, 5000, 48*procedural_scale):
-            for y in range(1000, 5000, 48*procedural_scale):
+            for y in range(1300, 5000, 48*procedural_scale):
                 if random.randint(0, 20) == 0:
                     tile_texture_number = random.randint(1, 4)
                     wall = arcade.Sprite(f"assets/map/tile{tile_texture_number}.png", scale=procedural_scale)
-                    wall.center_x = x
+                    wall.center_x = x + self.offset_sprites
                     wall.center_y = y
                     self.wall_list.append(wall)
 
@@ -160,6 +168,9 @@ class GameView(arcade.View):
 
         self.camera_gui.use()
         self.cat.draw_health_bar(WIDTH / 2, HEIGHT - 50)
+
+        # Displays cat X POSITION in game
+        # arcade.draw_text(text=f"X POS: {self.cat.center_x}", font_size=20, color=arcade.color.RED, start_x=WIDTH - 700, start_y=HEIGHT - 300)
 
         arcade.draw_texture_rectangle(center_x=self.mouse_x, center_y=self.mouse_y, texture=self.cursor_texture, width=64, height=64)
 
@@ -256,9 +267,18 @@ class GameView(arcade.View):
 
                     self.scene.add_sprite("Bullets", bullet)
 
+        elif key == arcade.key.Q and self.cat.cur_health > 0 and "HEAL" in SKILLS:
+            healing = Healing()
+            healing.center_x = self.cat.center_x
+            healing.center_y = self.cat.center_y - 5
+            self.scene.add_sprite("Healing", healing)
+            self.cat.cur_health += 20
+            if self.cat.cur_health > self.cat.max_health:
+                self.cat.cur_health = self.cat.max_health
+
         # FOR TESTING REMOVE LATER
         elif key == arcade.key.R:
-            SKILLS = ["AOE", "MULTIJUMP", "BLOCK"]
+            SKILLS = ["AOE", "MULTIJUMP", "BLOCK", "HEAL"]
             self.setup()
             global WAVE
             WAVE = 15
@@ -459,8 +479,8 @@ class GameView(arcade.View):
                     self.wave_size = 30
                 for i in range(self.wave_size):
                     rat = Rat()
-                    rat.center_x = random.randrange(2000, 6500)
-                    rat.center_y = 507
+                    rat.center_x = random.randrange(2000 + self.offset_sprites, 6500 + self.offset_sprites)
+                    rat.center_y = 507 + self.offset_sprites_y
                     patrol_distance = random.randint(200, 750)  # TODO: Refactor patrol distance and boundaries into enemy class
                     rand = random.randint(0, patrol_distance)
                     rat.boundary_left = rat.center_x - (patrol_distance - rand)
@@ -476,8 +496,8 @@ class GameView(arcade.View):
                     self.wave_size = 5
                 for i in range(self.wave_size):
                     nightborne = NightBorne()
-                    nightborne.center_x = random.randrange(2000, 7000)
-                    nightborne.center_y = 560
+                    nightborne.center_x = random.randrange(2000 + self.offset_sprites, 7000 + self.offset_sprites)
+                    nightborne.center_y = 560 + self.offset_sprites_y
                     patrol_distance = random.randint(200, 750)  # TODO: Refactor patrol distance and boundaries into enemy class
                     rand = random.randint(0, patrol_distance)
                     nightborne.boundary_left = nightborne.center_x - (patrol_distance - rand) # center_x - (patrol_distance - rand)
@@ -492,8 +512,8 @@ class GameView(arcade.View):
                 for i in range(self.wave_size):
                     stormhead = StormHead()
 
-                    stormhead.center_x = random.randrange(2000, 7000)
-                    stormhead.center_y = 680
+                    stormhead.center_x = random.randrange(2000 + self.offset_sprites, 7000 + self.offset_sprites)
+                    stormhead.center_y = 682 + self.offset_sprites_y
                     patrol_distance = random.randint(200, 750)  # TODO: Refactor patrol distance and boundaries into enemy class
                     rand = random.randint(0, patrol_distance)
                     stormhead.boundary_left = stormhead.center_x - (patrol_distance - rand) # center_x - (patrol_distance - rand)
@@ -507,8 +527,8 @@ class GameView(arcade.View):
                     self.wave_size = 30
                 for i in range(self.wave_size):
                     executioner = Executioner()
-                    executioner.center_x = random.randint(0, 10000)
-                    executioner.center_y = random.randint(1000, 5000)
+                    executioner.center_x = random.randint(0 + self.offset_sprites, 10000 + self.offset_sprites)
+                    executioner.center_y = random.randint(1000 + self.offset_sprites_y, 5000 + self.offset_sprites_y)
                     self.scene["Executioner"].append(executioner)
                 self.scene["Executioner"].enable_spatial_hashing()
     
@@ -529,8 +549,8 @@ class GameView(arcade.View):
         change_x_clouds_crosses = self.cat.change_x * 0.7 if movement_since_last_cycle else 0
         self.scene["Clouds"].move(change_x=change_x_clouds_crosses, change_y=0)
 
-        change_x_foreground = self.cat.change_x * -.2 if movement_since_last_cycle else 0
-        self.scene["Tile Layer 5"].move(change_x=change_x_foreground, change_y=0)
+        #change_x_foreground = self.cat.change_x * -.2 if movement_since_last_cycle else 0
+        #self.scene["Tile Layer 5"].move(change_x=change_x_foreground, change_y=0)
 
         self.center_x_last_cycle = self.cat.center_x
 
@@ -566,15 +586,22 @@ class GameView(arcade.View):
         self.physics_engine.update()
         self.center_camera_to_cat()
 
+        if self.cat.center_x < self.cat.boundary_left:
+            self.cat.change_x = 0
+        if self.cat.center_x > self.cat.boundary_right:
+            self.cat.change_x = 0
+
         self.scene.update()
         self.spawn_wave()
         self.update_enemies(delta_time)
         self.update_cat_sword(delta_time)
+        self.scene["Healing"].update_animation()
         self.update_cat_projectiles(delta_time)
         self.update_cat_cooldowns(delta_time)
         self.update_enemy_projectiles(delta_time)
         self.damage_to_cat(delta_time)
         self.update_parallax()
+
 
 
 class ShopView(arcade.View):
@@ -607,11 +634,9 @@ class ShopView(arcade.View):
                 SKILLS.append('AOE')
                 global_variables.SCORE -= 500
             elif "AOE" in SKILLS:
-                print("ALREADY PURCHASED")
                 purchased = arcade.gui.UITextArea(text="already purchased!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.RED)
                 self.v_box.add(purchased.with_space_around(bottom=5))
             else:
-                print("NOT ENOUGH POINTS")
                 not_enough = arcade.gui.UITextArea(text="not enough points!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.RED)
                 self.v_box.add(not_enough.with_space_around(bottom=5))
 
@@ -624,11 +649,9 @@ class ShopView(arcade.View):
                 SKILLS.append('BLOCK')
                 global_variables.SCORE -= 1000
             elif "BLOCK" in SKILLS:
-                print("ALREADY PURCHASED")
                 purchased = arcade.gui.UITextArea(text="Already purchased!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.RED)
                 self.v_box.add(purchased.with_space_around(bottom=5))
             else:
-                print("NOT ENOUGH POINTS")
                 not_enough = arcade.gui.UITextArea(text="Not enough points!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.RED)
                 self.v_box.add(not_enough.with_space_around(bottom=5))
 
@@ -641,11 +664,24 @@ class ShopView(arcade.View):
                 SKILLS.append('MULTIJUMP')
                 global_variables.SCORE -= 1000
             elif "MULTIJUMP" in SKILLS:
-                print("ALREADY PURCHASED")
                 purchased = arcade.gui.UITextArea(text="Already purchased!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.RED)
                 self.v_box.add(purchased.with_space_around(bottom=5))
             else:
-                print("NOT ENOUGH POINTS")
+                not_enough = arcade.gui.UITextArea(text="Not enough points!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.RED)
+                self.v_box.add(not_enough.with_space_around(bottom=5))
+
+        healing = arcade.gui.UIFlatButton(text='Healing\nCost: 1000', width=200)
+        self.v_box.add(healing.with_space_around(bottom=10))
+
+        @healing.event('on_click')
+        def on_click_healing(event):
+            if global_variables.SCORE >= 1000 and "HEAL" not in SKILLS:
+                SKILLS.append('HEAL')
+                global_variables.SCORE -= 1000
+            elif "HEAL" in SKILLS:
+                purchased = arcade.gui.UITextArea(text="Already purchased!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.RED)
+                self.v_box.add(purchased.with_space_around(bottom=5))
+            else:
                 not_enough = arcade.gui.UITextArea(text="Not enough points!", width=600, height=50, font_size=20, font_name="Kenney Future", text_color=arcade.color.RED)
                 self.v_box.add(not_enough.with_space_around(bottom=5))
 
@@ -686,7 +722,7 @@ class ShopView(arcade.View):
 
 def main():
     from menu import MenuView
-    window = arcade.Window(WIDTH, HEIGHT, "Arcade Game", vsync=True, antialiasing=False, resizable=True)
+    window = arcade.Window(WIDTH, HEIGHT, "Arcade Game", vsync=True, antialiasing=False)
     start_view = MenuView()
     window.show_view(start_view)
     arcade.run()

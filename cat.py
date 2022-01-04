@@ -107,3 +107,25 @@ class Cat(arcade.Sprite):
             self.texture = self.hurt_textures_pair[self.direction][0]
         elif current_animation_frame == 1:
             self.texture = self.hurt_textures_pair[self.direction][1]
+
+
+class Healing(arcade.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.textures = []
+        for i in range(15):
+            self.textures.append(arcade.load_texture("assets/HolyVFX02.png", x=i * 48, y=0, width=48, height=48))
+        self.texture = self.textures[0]
+        self.current_animation_counter = 0
+        self.scale = 2
+
+    def update_animation(self, delta_time: float = 1 / 60):
+        animation_speed = 10
+        self.current_animation_counter += 1
+        current_animation_frame = int(self.current_animation_counter // (1 / (delta_time * animation_speed)))   # Todo refactor this
+        if current_animation_frame >= 14:
+            self.remove_from_sprite_lists()
+
+        self.texture = self.textures[current_animation_frame]
+
+
